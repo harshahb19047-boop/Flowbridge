@@ -1,0 +1,1232 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>FlowBridge: Know your turn</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Noto+Sans+Tamil:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one app shell, five views (patient phone, staff dashboard, analytics, integration/settings). Palette follows the FlowBridge deck. */
+:root{
+  --bg:#F1F7F6; --surface:#FFFFFF; --surface2:#E8F2F1; --ink:#1C2B30; --muted:#566A70; --line:#D2E2E0;
+  --brand:#0A4D57; --teal:#0E7C7B; --teal-ink:#0A6564; --coral:#EF6F57; --coral-ink:#B83B25; --amber:#F2B33D; --amber-ink:#7A5200;
+  --good:#1B7F55; --header:#0A4D57; --header-ink:#FFFFFF; --focus:#0E7C7B;
+  --display:'Source Serif 4','Cambria',Georgia,serif; --body:'Lato','Noto Sans Tamil','Noto Sans Devanagari','Segoe UI',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E181B; --surface:#152428; --surface2:#1B3036; --ink:#E5EFEE; --muted:#9DB2B5; --line:#2A4349;
+  --brand:#7CCFC9; --teal:#37B5AE; --teal-ink:#7CCFC9; --coral:#F28A75; --coral-ink:#F6A08F; --amber:#F2B33D; --amber-ink:#F2C56B;
+  --good:#5CCB9B; --header:#0B3A42; --header-ink:#F2FAF9; --focus:#7CCFC9; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E181B; --surface:#152428; --surface2:#1B3036; --ink:#E5EFEE; --muted:#9DB2B5; --line:#2A4349;
+  --brand:#7CCFC9; --teal:#37B5AE; --teal-ink:#7CCFC9; --coral:#F28A75; --coral-ink:#F6A08F; --amber:#F2B33D; --amber-ink:#F2C56B;
+  --good:#5CCB9B; --header:#0B3A42; --header-ink:#F2FAF9; --focus:#7CCFC9; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.45;min-height:100%}
+body.large{font-size:17px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+header.top{background:var(--header);color:var(--header-ink)}
+.top-in{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding-block:12px;max-width:1280px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--coral);display:grid;place-items:center;color:#fff;font-family:var(--display);font-weight:700;font-size:18px}
+.brand b{font-family:var(--display);font-size:20px;display:block;line-height:1.1}
+.brand small{opacity:.8;font-size:12px}
+.ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ctl label{font-size:12px;opacity:.85}
+.clock{font-variant-numeric:tabular-nums;font-weight:900;font-size:20px;letter-spacing:.02em;padding:2px 10px;border:1px solid rgba(255,255,255,.35);border-radius:8px}
+.tb{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);color:var(--header-ink);padding:6px 11px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px}
+.tb:hover{background:rgba(255,255,255,.22)}
+.tb[aria-pressed="true"]{background:var(--amber);color:#1C2B30;border-color:var(--amber)}
+.top select{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);color:var(--header-ink);padding:6px 8px;border-radius:8px}
+.top select option{color:#1C2B30}
+.notice{background:var(--surface2);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.notice .in{max-width:1280px;margin:0 auto;padding-block:7px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+nav.tabs{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+nav.tabs .in{max-width:1280px;margin:0 auto;display:flex;gap:4px;overflow-x:auto}
+nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:12px 14px;cursor:pointer;font-weight:700;color:var(--muted);white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--teal-ink);border-bottom-color:var(--teal)}
+main{max-width:1280px;margin:0 auto;padding-block:18px 40px}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.p-teal{background:var(--teal);color:#fff}.p-coral{background:var(--coral);color:#1C2B30}.p-amber{background:var(--amber);color:#1C2B30}.p-grey{background:var(--surface2);color:var(--muted);border:1px solid var(--line)}.p-good{background:var(--good);color:#fff}
+body:not(.x) .p-good{color:#fff}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card h3{font-size:18px;margin-bottom:6px}
+.sub{color:var(--muted);font-size:13px}
+.btn{background:var(--teal);color:#fff;border:0;border-radius:9px;padding:8px 13px;font-weight:700;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.btn.alt{background:var(--surface2);color:var(--ink);border:1px solid var(--line)}
+.btn.warn{background:var(--amber);color:#1C2B30}
+.btn.crit{background:var(--coral);color:#1C2B30}
+.btn.sm{padding:5px 9px;font-size:12.5px;border-radius:8px}
+.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+label.f{display:block;font-weight:700;font-size:12.5px;margin:10px 0 4px;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grid{display:grid;gap:14px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.tile .k{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.tile .v{font-family:var(--display);font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
+.tile .n{font-size:12px;color:var(--muted)}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.scroll{overflow-x:auto}
+/* patient phone */
+.phone-wrap{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:22px;align-items:start}
+@media(max-width:860px){.phone-wrap{grid-template-columns:minmax(0,1fr)}}
+.phone{background:var(--surface);border:2px solid var(--ink);border-radius:30px;padding:16px 16px 20px;max-width:420px;width:100%}
+.phone .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+.lang button{border:1px solid var(--line);background:var(--surface2);padding:5px 10px;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px}
+.lang button[aria-pressed="true"]{background:var(--teal);color:#fff;border-color:var(--teal)}
+.token{background:var(--brand);color:#fff;border-radius:16px;padding:16px;text-align:center}
+:root[data-theme="dark"] .token,:root:not([data-theme="light"]) .token{}
+.token .big{font-family:var(--display);font-size:52px;font-weight:700;letter-spacing:.02em;line-height:1.05;font-variant-numeric:tabular-nums}
+.token small{opacity:.85}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.stat div{background:var(--surface2);border-radius:12px;padding:10px;text-align:center}
+.stat b{font-family:var(--display);font-size:26px;display:block;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.banner{border-radius:10px;padding:8px 10px;font-weight:700;font-size:13px;margin-top:10px}
+.b-amber{background:var(--amber);color:#1C2B30}.b-coral{background:var(--coral);color:#1C2B30}.b-teal{background:var(--teal);color:#fff}
+.why{font-size:12.5px;color:var(--muted);margin-top:8px}
+/* staff */
+.doc{display:flex;flex-direction:column;gap:10px;min-width:0}
+.doc-h{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.serving{background:var(--brand);color:#fff;border-radius:12px;padding:12px}
+.serving .t{font-family:var(--display);font-size:30px;font-weight:700;line-height:1.1}
+.serving.idle{background:var(--surface2);color:var(--muted)}
+.q{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.q li{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface);min-width:0}
+.q li .top1{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.q li .pos{font-weight:900;color:var(--muted);width:20px;font-variant-numeric:tabular-nums}
+.q li .tk{font-weight:900;font-variant-numeric:tabular-nums}
+.q li.ov{border-color:var(--coral)}
+.q .meta{font-size:12px;color:var(--muted);margin-top:3px}
+.q .eta{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
+.ovform{background:var(--surface2);border-radius:8px;padding:8px;margin-top:6px}
+.bars .bar{display:grid;grid-template-columns:90px 1fr 40px;gap:8px;align-items:center;margin:5px 0;font-size:13px}
+.bars .track{background:var(--surface2);border-radius:6px;height:16px;overflow:hidden}
+.bars .fill{background:var(--teal);height:100%}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-weight:700;font-size:13px;z-index:20;max-width:90vw}
+.sms{background:var(--surface2);border-radius:10px;padding:8px 10px;margin-bottom:6px;font-size:13px}
+.sms small{color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--muted);font-weight:700}.kv dd{margin:0}
+@media (prefers-reduced-motion:no-preference){.fill{transition:width .3s}}
+
+.skip{position:absolute;left:-999px;top:0;background:var(--ink);color:var(--bg);padding:8px 12px;z-index:50}.skip:focus{left:8px;top:8px}
+a{color:var(--teal-ink)}
+header.site{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+header.site .in{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:6px 18px;flex-wrap:wrap;padding-block:10px}
+header.site .brand{margin-right:auto;text-decoration:none;color:var(--ink)}
+header.site .brand b{font-size:21px;color:var(--brand)}
+header.site .brand small{color:var(--muted)}
+#nav{display:flex;gap:2px;flex-wrap:wrap}
+#nav a{padding:8px 11px;border-radius:8px;text-decoration:none;color:var(--ink);font-weight:700;font-size:14px}
+#nav a:hover{background:var(--surface2)}
+#nav a[aria-current="page"]{color:var(--teal-ink);background:var(--surface2)}
+.lang.nav button{font-size:12.5px;padding:4px 9px}
+.back{display:inline-block;margin-bottom:10px;font-weight:700;text-decoration:none}
+.back:hover{text-decoration:underline}
+button.back{background:none;border:0;padding:6px 2px;margin-bottom:6px;color:var(--teal-ink);cursor:pointer;font:inherit;font-weight:700}
+button.back:hover{text-decoration:underline}
+.g-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 14px 0}
+.g-bar button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.45);border-radius:99px;padding:6px 12px;font-weight:700;cursor:pointer;font-size:13px}
+.g-bar button[aria-pressed="true"]{background:#fff;color:#0A4D57}
+.g-lang{display:flex;gap:6px}
+.hero{background:linear-gradient(135deg,var(--header),var(--teal));color:#fff;border-radius:18px;padding:clamp(22px,5vw,52px);margin-bottom:22px}
+.hero .eyebrow{font-size:12.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;opacity:.85}
+.hero h1{font-size:clamp(28px,5vw,48px);line-height:1.1;margin:8px 0 12px;max-width:22ch}
+.hero p{max-width:60ch;font-size:16px;opacity:.95;margin:0 0 18px}
+.hero .btn{padding:11px 18px;font-size:15px;text-decoration:none;display:inline-block}
+.hero .btn.alt{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.45)}
+.hero .btn.main{background:var(--coral);color:#1C2B30}
+h1.pg{font-size:clamp(26px,4vw,38px);margin:0 0 4px}
+h2.sec{font-size:24px;margin:30px 0 4px}
+.sec-sub{color:var(--muted);margin:0 0 12px}
+a.dcard{display:block;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+a.dcard:hover{border-color:var(--teal);box-shadow:0 2px 10px rgba(0,0,0,.08)}
+a.dcard h3{font-size:18px;margin:6px 0 2px}
+.dcard .nums{display:flex;gap:16px;margin-top:10px;font-size:13px;color:var(--muted)}
+.dcard .nums b{display:block;font-size:22px;color:var(--ink);font-family:var(--display)}
+.detail{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:860px){.detail{grid-template-columns:minmax(0,1fr)}}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.chips a,.chips button{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:99px;text-decoration:none;color:var(--ink);font-weight:700;font-size:13px;cursor:pointer}
+.chips [aria-pressed="true"]{background:var(--teal);color:#fff;border-color:var(--teal)}
+.step{display:flex;gap:12px;align-items:flex-start}
+.step .n{flex:none;width:32px;height:32px;border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;font-weight:900}
+footer.site{border-top:1px solid var(--line);background:var(--surface);margin-top:30px;padding-block:22px 90px;color:var(--muted);font-size:13px}
+footer.site .in{max-width:1280px;margin:0 auto;display:flex;gap:10px 30px;flex-wrap:wrap}
+footer.site a{color:var(--muted)}
+details.dock{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:max(12px,env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);border-radius:12px;z-index:30;max-width:calc(100vw - 24px);box-shadow:0 4px 18px rgba(0,0,0,.3)}
+details.dock summary{cursor:pointer;padding:9px 14px;font-size:13px;list-style:none;display:flex;gap:10px;align-items:center}
+details.dock summary::-webkit-details-marker{display:none}
+.dock-in{padding:4px 12px 12px;display:flex;flex-direction:column;gap:8px;width:min(340px,calc(100vw - 24px))}
+.dock-in .r{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.dock-in .tb{background:rgba(255,255,255,.14);color:var(--bg);border-color:rgba(255,255,255,.4)}
+.dock-in .tb[aria-pressed="true"]{background:var(--amber);color:#1C2B30}
+.dock-in select{background:rgba(255,255,255,.14);color:var(--bg);border-color:rgba(255,255,255,.4);width:auto}
+.dock-in select option{color:#1C2B30}
+.dock-in small{opacity:.75;line-height:1.35}
+.bigtok{font-family:var(--display);font-size:clamp(40px,8vw,64px);font-weight:700;line-height:1}
+
+.gate{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#0A4D57,#0E7C7B 70%,#EF6F57 130%);display:flex;flex-direction:column;overflow:auto;color:#fff}
+.gate[hidden]{display:none}
+.splash{margin:auto;text-align:center;padding:24px}
+.splash .logo{width:92px;height:92px;border-radius:24px;font-size:52px;margin:0 auto 18px}
+.splash h1{font-size:clamp(38px,9vw,60px);margin:0}
+.splash p{opacity:.9;font-size:18px;margin:6px 0 0}
+@media (prefers-reduced-motion:no-preference){.splash{animation:pop .7s ease both}@keyframes pop{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}}
+.g-top{flex:1 1 38%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 20px 20px;min-height:200px}
+.g-top .logo{width:64px;height:64px;font-size:36px;border-radius:18px;margin-bottom:10px}
+.g-top h2{font-size:clamp(28px,6vw,40px);margin:0}
+.g-top p{margin:6px 0 0;opacity:.92;max-width:34ch}
+.g-sheet{background:var(--surface);color:var(--ink);border-radius:26px 26px 0 0;padding:22px max(20px,env(safe-area-inset-left,0px)) calc(24px + env(safe-area-inset-bottom,0px));width:100%;max-width:520px;margin:0 auto}
+.g-sheet h3{font-size:22px;margin:0 0 4px}
+.g-tabs{display:flex;gap:6px;margin:12px 0}
+.g-tabs button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);font-weight:700;cursor:pointer;color:var(--ink)}
+.g-tabs button[aria-pressed="true"]{background:var(--teal);color:#fff;border-color:var(--teal)}
+.g-phone{display:flex;gap:8px}.g-phone span{display:grid;place-items:center;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface2);font-weight:700}
+.g-big{width:100%;padding:13px;font-size:16px;margin-top:14px;border-radius:12px}
+.g-or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12.5px;margin:14px 0 0}.g-or:before,.g-or:after{content:"";flex:1;height:1px;background:var(--line)}
+.g-otp{letter-spacing:.6em;text-align:center;font-size:24px;font-weight:700}
+.g-hint{background:var(--surface2);border-radius:8px;padding:8px 10px;font-size:12.5px;color:var(--muted);margin-top:10px}
+.g-link{background:none;border:0;color:var(--teal-ink);font-weight:700;cursor:pointer;padding:6px 0}
+.userbox{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+</style></head><body>
+<div class="gate" id="gate" role="dialog" aria-modal="true" aria-label="Welcome to FlowBridge"></div>
+<a class="skip" href="#view">Skip to content</a>
+<header class="site"><div class="wrap in">
+  <a class="brand" href="#/"><span class="logo" aria-hidden="true">F</span><span><b>FlowBridge</b><small>Plug in, don't replace</small></span></a>
+  <nav id="nav" aria-label="Main">
+    <a href="#/hospital" data-r="hospital" data-for="p">Doctors &amp; queues</a>
+    <a href="#/appointments" data-r="appointments" data-for="b">Appointments</a>
+    <a href="#/checkin" data-r="checkin" data-for="p">Check in</a>
+    <a href="#/how" data-r="how" data-for="b">How it works</a>
+    <a href="#/staff" data-r="staff" data-for="s">Staff</a>
+    <a href="#/analytics" data-r="analytics" data-for="s">Analytics</a>
+    <a href="#/settings" data-r="settings" data-for="s">Integration</a>
+  </nav>
+  <div class="userbox"><span id="userTxt"></span><button class="btn alt sm" data-act="logout">Log out</button></div>
+  <div class="lang nav" role="group" aria-label="Language">
+    <button data-act="lang" data-l="en">English</button><button data-act="lang" data-l="ta">தமிழ்</button><button data-act="lang" data-l="hi">हिन्दी</button>
+  </div>
+</div></header>
+<div class="notice"><div class="wrap"><div class="in">
+  <span class="pill p-amber">PROTOTYPE · DEMO DATA</span>
+  <span>All patients, numbers and doctors are made up. The hospital connection and SMS are simulated. FlowBridge never decides clinical priority; authorised staff do.</span>
+</div></div></div>
+<main class="wrap" id="main"><div id="view" tabindex="-1"></div></main>
+<footer class="site"><div class="wrap in">
+  <div><b>FlowBridge</b><br>Add-on queue and patient-flow layer for hospital OPDs.<br>Course prototype, Strategic Product Management, TSM Madurai.</div>
+  <div><b>Explore</b><br><a href="#/hospital">Doctors &amp; queues</a><br><a href="#/how">How it works</a><br><a href="#/analytics">Analytics</a></div>
+  <div><b>Good to know</b><br>Synthetic data only. Not medical advice.<br>Built with privacy in mind (DPDP Act 2023): tokens, not names, on public screens.</div>
+</div></footer>
+<details class="dock" id="dock"><summary><b>Demo controls</b><span class="clock" id="clk" style="border-color:rgba(255,255,255,.4);font-size:15px">10:00</span></summary>
+  <div class="dock-in">
+    <small>Jump time forward to watch queues move. In a real hospital this is the live clock.</small>
+    <div class="r"><button class="tb" data-act="tick" data-n="5">+5 min</button><button class="tb" data-act="tick" data-n="15">+15 min</button>
+    <button class="tb" id="autoBtn" data-act="auto" aria-pressed="false">Auto-run</button><button class="tb" id="apBtn" data-act="autopilot" aria-pressed="false">Autopilot</button></div>
+    <div class="r"><label for="role" style="font-size:12px">Signed in as</label><select id="role" data-act="role"><option value="Reception">Reception</option><option value="Manager">Manager</option><option value="Admin">Admin</option></select>
+    <button class="tb" id="bigBtn" data-act="large" aria-pressed="false">A+</button><button class="tb" data-act="reset">Reset demo</button></div>
+  </div></details>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+(function(){
+'use strict';
+/* ---------- helpers ---------- */
+var $=function(s,r){return (r||document).querySelector(s)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var fmt=function(m){m=Math.round(m);var h=Math.floor(m/60)%24,mm=m%60;return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm};
+var median=function(a){if(!a.length)return null;var b=a.slice().sort(function(x,y){return x-y}),n=b.length;return n%2?b[(n-1)/2]:(b[n/2-1]+b[n/2])/2};
+var pct=function(a,p){if(!a.length)return null;var b=a.slice().sort(function(x,y){return x-y});return b[Math.min(b.length-1,Math.ceil(p*b.length)-1)]};
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ---------- i18n (patient screen) ---------- */
+var T={
+ en:{checkin:'Check in',dept:'Department',doctor:'Doctor',visit:'Visit type',walkin:'Walk-in',appt:'Appointment',ref:'Booking reference',name:'Name (optional)',phone:'Mobile (optional)',consent:'Send me an SMS when my turn is near',token:'Your token',ahead:'Patients ahead',wait:'Estimated wait',min:'min',next:'You are next',calling:'You are being called',late:'Doctor is running late',paused:'Doctor is away for a short while',done:'Visit complete',noshow:'Not present when called',why:'Why this position',viewAs:'Demo: view as token',newc:'New check-in',room:'Room'},
+ ta:{checkin:'பதிவு செய்க',dept:'துறை',doctor:'மருத்துவர்',visit:'வருகை வகை',walkin:'நேரடி வருகை',appt:'முன்பதிவு',ref:'முன்பதிவு எண்',name:'பெயர் (விருப்பம்)',phone:'கைபேசி (விருப்பம்)',consent:'என் முறை நெருங்கும்போது SMS அனுப்புங்கள்',token:'உங்கள் டோக்கன்',ahead:'முன்னால் உள்ள நோயாளிகள்',wait:'தோராயமான காத்திருப்பு',min:'நிமிடம்',next:'நீங்கள் அடுத்து',calling:'உங்களை அழைக்கிறார்கள்',late:'மருத்துவர் தாமதமாக உள்ளார்',paused:'மருத்துவர் சிறிது நேரம் இல்லை',done:'முடிந்தது',noshow:'அழைத்தபோது வரவில்லை',why:'இந்த நிலை ஏன்',room:'அறை'},
+ hi:{checkin:'चेक-इन करें',dept:'विभाग',doctor:'डॉक्टर',visit:'यात्रा का प्रकार',walkin:'वॉक-इन',appt:'अपॉइंटमेंट',ref:'बुकिंग संदर्भ',name:'नाम (वैकल्पिक)',phone:'मोबाइल (वैकल्पिक)',consent:'मेरी बारी पास आने पर SMS भेजें',token:'आपका टोकन',ahead:'आगे के मरीज़',wait:'अनुमानित प्रतीक्षा',min:'मिनट',next:'आप अगले हैं',calling:'आपको बुलाया जा रहा है',late:'डॉक्टर देरी से चल रहे हैं',paused:'डॉक्टर कुछ देर के लिए अनुपस्थित हैं',done:'पूरा हुआ',noshow:'बुलाने पर अनुपस्थित',why:'यह स्थान क्यों',room:'कक्ष'}
+};
+var tr=function(k){var d=T[S.lang]||T.en;return d[k]||T.en[k]||k};
+
+/* ---------- state ---------- */
+var S={user:null,view:'patient',lang:'en',role:'Reception',clock:600,auto:false,autopilot:false,large:false,
+  rule:'slot',grace:15,svcDefault:8,alertAhead:2,retention:30,baseline:45,syncFail:false,lastSync:600,mode:'CSV',
+  track:null,ovr:null,form:{},csvMsg:'',patients:[],doctors:[],sms:[],audit:[],seq:0,ovSeq:0,counters:{GM:100,OR:100},toast:null};
+
+var NAMES=['S. Murugan','K. Priya','A. Banu','R. Selvam','M. Devi','P. Ganesh','L. Meena','V. Kannan','T. Anitha','N. Rajesh','G. Saranya','D. Vignesh','B. Kavitha','H. Imran','C. Lakshmi','J. Arun','F. Noor','E. Pandian','Y. Revathi','W. Siva','O. Thenmozhi','U. Karthik','I. Fatima','Q. Balu'];
+function newDoctors(){return [
+ {id:'d1',name:'Dr. R. Lakshmi',dept:'General Medicine',code:'GM',room:'Room 2',delay:0,paused:false,current:null},
+ {id:'d2',name:'Dr. S. Venkat',dept:'General Medicine',code:'GM',room:'Room 3',delay:0,paused:false,current:null},
+ {id:'d3',name:'Dr. M. Karthikeyan',dept:'Orthopaedics',code:'OR',room:'Room 5',delay:0,paused:false,current:null}]}
+var doc=function(id){return S.doctors.filter(function(d){return d.id===id})[0]};
+var pat=function(id){return S.patients.filter(function(p){return p.id===id})[0]};
+
+/* ---------- queue logic ---------- */
+function key(p){
+  if(S.rule==='arrival')return p.arrival;
+  if(p.type==='appt'&&p.arrival<=p.slot+S.grace)return p.slot;
+  return p.arrival}
+function waiting(d){
+  return S.patients.filter(function(p){return p.doctor===d.id&&p.status==='waiting'}).sort(function(a,b){
+    if(a.override&&b.override)return a.override.seq-b.override.seq;
+    if(a.override)return -1; if(b.override)return 1;
+    return key(a)-key(b)||a.arrival-b.arrival||a.n-b.n})}
+function avgSvc(d){
+  var s=S.patients.filter(function(p){return p.doctor===d.id&&p.status==='done'}).map(function(p){return p.end-p.start});
+  return s.length>=3?Math.round(median(s)):S.svcDefault}
+function eta(p){
+  var d=doc(p.doctor),q=waiting(d),i=q.indexOf(p);
+  var ahead=(i<0?q.length:i)+(d.current?1:0);
+  var w=ahead*avgSvc(d)+d.delay;
+  var lo=Math.floor(w*0.9/5)*5,hi=Math.ceil(w*1.15/5)*5; if(d.paused)hi+=10; if(hi<=lo)hi=lo+5;
+  return {w:w,lo:lo,hi:hi,ahead:ahead}}
+function reason(p){
+  if(p.override)return 'Priority set by staff: '+p.override.reason+(p.override.note?' ('+p.override.note+')':'');
+  if(S.rule==='arrival')return 'Arrival order ('+fmt(p.arrival)+')';
+  if(p.type==='appt'){return p.arrival<=p.slot+S.grace?'Appointment '+fmt(p.slot)+', arrived '+fmt(p.arrival):'Late for '+fmt(p.slot)+' slot (arrived '+fmt(p.arrival)+'), queued by arrival'}
+  return 'Walk-in, arrival order ('+fmt(p.arrival)+')'}
+function mask(ph){ph=String(ph||'').replace(/\D/g,'');return ph.length>=10?'+91 '+ph.slice(0,2)+'••• ••'+ph.slice(-3):'(no number)'}
+function log(action,detail,role){S.audit.unshift({t:S.clock,role:role||S.role,action:action,detail:detail||''});if(S.audit.length>80)S.audit.pop()}
+function sendSms(p,kind,text){
+  S.sms.unshift({t:S.clock,to:mask(p.phone),token:p.token,kind:kind,text:text});if(S.sms.length>40)S.sms.pop();p.smsCount=(p.smsCount||0)+1}
+function mkPatient(o){
+  var d=doc(o.doctor);S.counters[d.code]+=1;
+  var p={id:'p'+(++S.seq),n:S.seq,token:d.code+'-'+S.counters[d.code],name:o.name||'Walk-in patient',phone:o.phone||'',consent:!!o.consent&&!!o.phone,
+    doctor:o.doctor,type:o.type,slot:o.slot||null,ref:o.ref||null,arrival:o.arrival,status:o.status,calls:0,svc:o.svc||8,start:null,called:null,end:null,
+    predWait:null,override:null,alerted:false,smsCount:0};
+  S.patients.push(p);return p}
+function checkIn(o){
+  var p;
+  if(o.type==='appt'){
+    p=S.patients.filter(function(x){return x.status==='booked'&&x.ref&&x.ref.toUpperCase()===String(o.ref||'').trim().toUpperCase()&&x.doctor===o.doctor})[0];
+    if(!p)return {err:'No booked appointment found for that reference with this doctor. Try A-201, A-202 or A-203.'};
+    p.status='waiting';p.arrival=S.clock;p.consent=!!o.consent&&!!(o.phone||p.phone);if(o.phone)p.phone=o.phone;if(o.name)p.name=o.name;
+  }else{
+    var r=rng(S.seq*31+7)();p=mkPatient({doctor:o.doctor,type:'walk',name:o.name,phone:o.phone,consent:o.consent,arrival:S.clock,status:'waiting',svc:6+Math.round(r*6)});
+  }
+  p.predWait=eta(p).w;
+  log('Check-in',p.token+' ('+(o.type==='appt'?'appointment '+p.ref:'walk-in')+(o.via==='desk'?', desk-assisted':', self-service')+')',o.via==='desk'?S.role:'Patient');
+  return {p:p}}
+function finishCurrent(d){
+  var c=d.current;if(!c)return;
+  c.status='done';c.end=Math.min(S.clock,c.start+c.svc);d.current=null}
+function callNext(d,by){
+  if(d.paused)return false;
+  var q=waiting(d);if(!q.length){return false}
+  var p=q[0];p.status='consult';p.calls=1;p.called=S.clock;p.start=S.clock;d.current=p;
+  log('Called',p.token+' to '+d.room,by||S.role);return true}
+function step(){
+  S.clock+=1;
+  S.doctors.forEach(function(d){
+    if(d.current&&!d.paused&&S.clock>=d.current.start+d.current.svc){finishCurrent(d);if(S.autopilot&&callNext(d,'Autopilot')){}}
+    else if(!d.current&&S.autopilot&&!d.paused){callNext(d,'Autopilot')}
+  })}
+function checkAlerts(){
+  S.doctors.forEach(function(d){waiting(d).forEach(function(p){
+    var e=eta(p);
+    if(p.consent&&!p.alerted&&e.ahead<=S.alertAhead){p.alerted=true;
+      sendSms(p,'Turn approaching','FlowBridge: your turn is approaching (token '+p.token+', '+d.name+', '+d.room+'). About '+e.lo+'-'+e.hi+' min. Please stay nearby.')}})})}
+function delayAlert(d,why){
+  waiting(d).forEach(function(p){if(p.consent){var e=eta(p);sendSms(p,'Delay alert','FlowBridge: '+d.name+' '+why+'. New estimate for '+p.token+': '+e.lo+'-'+e.hi+' min.')}})}
+
+/* ---------- seed (20 patients in the OPD, 10:00) ---------- */
+function seed(){
+  var keep={view:S.view,lang:S.lang,role:S.role,large:S.large};
+  S.clock=600;S.auto=false;S.autopilot=false;S.patients=[];S.sms=[];S.audit=[];S.seq=0;S.ovSeq=0;S.counters={GM:100,OR:100};S.doctors=newDoctors();
+  S.rule='slot';S.grace=15;S.svcDefault=8;S.alertAhead=2;S.retention=30;S.baseline=45;S.syncFail=false;S.lastSync=598;S.mode='CSV';S.track=null;S.ovr=null;S.rs=null;S.cx=null;S.csvMsg='';
+  var r=rng(11),ni=0,nm=function(){return NAMES[(ni++)%NAMES.length]};
+  var ph=['98400 12345','97890 22211','99440 33478','','94430 55612','','98650 70123',''];var pi=0;var nph=function(){return ph[(pi++)%ph.length]};
+  function hist(d,arr,w,pred,svc){var p=mkPatient({doctor:d,type:'walk',name:nm(),phone:'',arrival:arr,status:'done',svc:svc});p.called=arr+w;p.start=arr+w;p.end=arr+w+svc;p.predWait=pred;p.calls=1}
+  [[ 'd1',545,14,12,9],['d1',550,22,26,8],['d1',556,31,24,10],['d1',560,19,21,7],
+   ['d2',548,12,15,8],['d2',553,27,22,9],['d2',559,35,30,8],
+   ['d3',552,24,20,12],['d3',557,38,32,11]].forEach(function(a){hist(a[0],a[1],a[2],a[3],a[4])});
+  function cur(d,arr,start,svc){var p=mkPatient({doctor:d,type:'walk',name:nm(),phone:'',arrival:arr,status:'consult',svc:svc});p.start=start;p.called=start;p.calls=1;p.predWait=start-arr;doc(d).current=p}
+  cur('d1',563,596,10);cur('d2',570,598,9);cur('d3',568,594,12);
+  function w(d,type,arr,slot,consent){var p=mkPatient({doctor:d,type:type,name:nm(),phone:consent?nph():'',consent:consent,arrival:arr,slot:slot,ref:type==='appt'?'A-1'+S.seq:null,status:'waiting',svc:6+Math.round(r()*6)});return p}
+  [['d1','walk',575],['d1','appt',580,585],['d1','walk',584],['d1','appt',588,600],['d1','walk',592],['d1','walk',597,0,true],
+   ['d2','appt',578,590],['d2','walk',586],['d2','walk',590,0,true],['d2','appt',596,610],
+   ['d3','walk',580],['d3','appt',585,595],['d3','walk',593,0,true]].forEach(function(a){w(a[0],a[1],a[2],a[3],a[4])});
+  function bk(d,slot,ref,phone){var p=mkPatient({doctor:d,type:'appt',name:nm(),phone:phone||'',consent:!!phone,arrival:null,slot:slot,ref:ref,status:'booked',svc:6+Math.round(r()*6)});}
+  bk('d1',615,'A-201');bk('d2',620,'A-202','98430 99881');bk('d3',625,'A-203');bk('d1',630,'A-204');
+  S.patients.forEach(function(p){if(p.status==='waiting')p.predWait=eta(p).w});
+  S.patients.forEach(function(p){if(p.status==='waiting'&&p.consent&&eta(p).ahead<=S.alertAhead)p.alerted=true});
+  log('Day start','Synthetic OPD loaded: 3 doctors, 20 patients','System');
+  S.view=keep.view;S.lang=keep.lang;S.role=keep.role;S.large=keep.large;
+  var first=S.patients.filter(function(p){return p.status==='waiting'&&p.doctor==='d1'&&p.consent})[0];S.track=first?first.id:null;
+}
+
+/* ---------- views ---------- */
+function docOptions(sel,dept){return S.doctors.filter(function(d){return !dept||d.dept===dept}).map(function(d){return '<option value="'+d.id+'"'+(d.id===sel?' selected':'')+'>'+esc(d.name)+' · '+esc(d.room)+'</option>'}).join('')}
+
+var RANGE=function(w,d){var lo=Math.floor(w*0.9/5)*5,hi=Math.ceil(w*1.15/5)*5;if(d&&d.paused)hi+=10;if(hi<=lo)hi=lo+5;return [lo,hi]};
+var byToken=function(t){return S.patients.filter(function(p){return p.token===t})[0]};
+function stPill(d){return d.paused?'<span class="pill p-amber">Doctor away briefly</span>':d.delay>0?'<span class="pill p-coral">Running late +'+d.delay+' min</span>':d.current?'<span class="pill p-teal">In consultation</span>':'<span class="pill p-grey">Ready</span>'}
+function accuracy(d){
+  var x=S.patients.filter(function(p){return p.doctor===d.id&&p.status==='done'&&p.predWait!=null});
+  if(x.length<5)return {n:x.length,pct:null};
+  var ok=x.filter(function(p){return Math.abs((p.called-p.arrival)-p.predWait)<=10}).length;return {n:x.length,ok:ok,pct:Math.round(ok/x.length*100)}}
+function dCard(d){
+  var q=waiting(d),r=RANGE(q.length*avgSvc(d)+(d.current?avgSvc(d):0)+d.delay,d);
+  return '<a class="dcard" href="#/doctor/'+d.id+'"><div class="row" style="justify-content:space-between"><span class="pill p-grey">'+esc(d.dept)+'</span>'+stPill(d)+'</div><h3>'+esc(d.name)+'</h3><div class="sub">'+esc(d.room)+' · updated '+fmt(S.clock)+'</div>'+
+   '<div class="nums"><span><b>'+q.length+'</b>waiting</span><span><b>'+r[0]+'–'+r[1]+'</b>min if you arrive now</span><span><b>'+avgSvc(d)+'</b>min per patient</span></div></a>'}
+function vHome(){
+  var sample=S.patients.filter(function(p){return p.status==='waiting'&&p.consent})[0]||S.patients.filter(function(p){return p.status==='waiting'})[0];
+  return '<section class="hero"><div class="eyebrow">Hospital OPD queue add-on · prototype</div><h1>Know your turn, without the crowding.</h1>'+
+   '<p>FlowBridge sits on top of the hospital\'s existing system. See your token, how many patients are ahead and an honest wait range, in Tamil, English or Hindi. No new software for doctors to learn.</p>'+
+   '<a class="btn main" href="#/hospital">Find a doctor\'s queue</a> <a class="btn alt" href="#/checkin">Check in now</a> <a class="btn alt" href="#/appointments">Appointments</a> <a class="btn alt" href="#/how">How it works</a></section>'+
+   '<h2 class="sec" style="margin-top:0">Live queues at Demo OPD, Madurai</h2><p class="sec-sub">Demo data. Every status shows when it was last updated.</p>'+
+   '<div class="grid g3">'+S.doctors.map(dCard).join('')+'</div>'+
+   '<h2 class="sec">Built on transparency</h2><p class="sec-sub">We show what we know, how it was worked out, and what we do not know.</p>'+
+   '<div class="grid g4">'+[['Ranges, not promises','Wait is shown as a range and widens when a doctor runs late.'],['Reasons shown','Every queue position says why: appointment slot, arrival time or a logged priority.'],['Privacy first','Tokens on public screens. Alerts only with consent. Medical records never touched.'],['Plug in, don\'t replace','Works beside the hospital system via CSV or API. If the link fails, staff can still add tokens by hand.']].map(function(t){return '<div class="card"><h3 style="font-size:17px">'+t[0]+'</h3><p class="sub" style="margin:0">'+t[1]+'</p></div>'}).join('')+'</div>'+
+   '<h2 class="sec">Try the prototype</h2><div class="card"><div class="chips"><a href="#/checkin">Check in as a walk-in</a>'+(sample?'<a href="#/queue/'+sample.token+'">Open a patient\'s token page ('+sample.token+')</a>':'')+'<a href="#/doctor/d1">See a doctor\'s public board</a><a href="#/staff">Open the staff dashboard</a><a href="#/analytics">View analytics</a></div><p class="sub" style="margin:0">Tip: open the Demo controls (bottom right) to move time forward, then press &ldquo;+15 min late&rdquo; for a doctor on the Staff page and watch every range update.</p></div>'}
+function vHow(){
+  var steps=[['Patient checks in','At the desk or on a phone: walk-in or appointment reference. Alerts are optional and need consent.'],['Queue merges','Appointments and walk-ins share one fair queue with the hospital\'s own rule, shown to everyone.'],['Wait is estimated','Patients ahead × average service time + doctor delay, shown as a range. Rule-based first.'],['Staff stay in control','Call next, pause, mark late. Any priority override needs a reason and is logged.'],['Patient is kept informed','Token page updates and a simulated SMS goes out when the turn is near or the doctor is late.'],['Hospital learns','Median and 90th-percentile waits, no-show rate and estimate accuracy, to compare against a measured baseline.']];
+  var probs=[['Crowded waiting halls','Patients can wait outside the hall and come when their turn is near.'],['No idea how long','A range with a stated reason, and an alert if the doctor runs late.'],['Walk-in versus appointment fairness','One visible rule and a grace window for late arrivals.'],['Privacy','Tokens only on public screens, alerts only with consent, role-based access, audit log.'],['Integration risk','Start with scheduled CSV or a mock API. Manual fallback if the feed fails.']];
+  return '<h1 class="pg">How FlowBridge works</h1><p class="sec-sub">One add-on layer next to the hospital system. Nothing is replaced.</p><div class="grid g3">'+steps.map(function(t,i){return '<div class="card step"><div class="n">'+(i+1)+'</div><div><h3 style="font-size:17px;margin:0 0 3px">'+t[0]+'</h3><p class="sub" style="margin:0">'+t[1]+'</p></div></div>'}).join('')+'</div>'+
+   '<h2 class="sec">Problems we are designing for</h2><div class="grid g3">'+probs.map(function(t){return '<div class="card"><h3 style="font-size:17px">'+t[0]+'</h3><p class="sub" style="margin:0">'+t[1]+'</p></div>'}).join('')+'</div>'+
+   '<div class="card" style="margin-top:16px"><h3>The wait-time rule</h3><p style="margin:0">Wait = (patients ahead × average service time) + doctor delay. For example (3 × 8) + 4 = 28 min, shown as 25–35 min. We do not claim AI predictions until there is real data to train on.</p></div>'}
+function vHospital(){
+  var depts=[];S.doctors.forEach(function(d){if(depts.indexOf(d.dept)<0)depts.push(d.dept)});
+  var f=S.form['h-dept']||'All';
+  var list=S.doctors.filter(function(d){return f==='All'||d.dept===f});
+  return '<h1 class="pg">Doctors &amp; queues</h1><p class="sub">Demo OPD, Madurai · synthetic data · updated '+fmt(S.clock)+'</p>'+
+   '<div class="chips" role="group" aria-label="Department filter">'+['All'].concat(depts).map(function(x){return '<button data-act="hdept" data-d="'+esc(x)+'" aria-pressed="'+(x===f)+'">'+esc(x)+'</button>'}).join('')+'</div>'+
+   '<div class="grid g3">'+list.map(dCard).join('')+'</div>'}
+function vDoctor(id){
+  var d=doc(id);if(!d)return vMissing('Doctor not found','That doctor is not in this demo.');
+  var q=waiting(d),c=d.current,ac=accuracy(d),ahead=q.length+(c?1:0),w=ahead*avgSvc(d)+d.delay,r=RANGE(w,d);
+  return '<a class="back" href="#/hospital">← Back to doctors</a><div class="row" style="justify-content:space-between;align-items:flex-start"><div><span class="pill p-grey">'+esc(d.dept)+' · DEMO</span><h1 class="pg">'+esc(d.name)+'</h1><div class="sub">'+esc(d.room)+' · Demo OPD, Madurai</div></div><div>'+stPill(d)+'</div></div>'+
+   '<div class="detail" style="margin-top:14px"><div class="grid" style="gap:14px">'+
+   '<div class="card"><h3>Queue right now</h3><div class="grid g4" style="margin-bottom:10px"><div class="tile"><div class="k">Waiting</div><div class="v">'+q.length+'</div></div><div class="tile"><div class="k">Now serving</div><div class="v">'+(c?esc(c.token):'—')+'</div></div><div class="tile"><div class="k">If you arrive now</div><div class="v" style="font-size:24px">'+r[0]+'–'+r[1]+' min</div></div><div class="tile"><div class="k">Avg per patient</div><div class="v">'+avgSvc(d)+' min</div></div></div>'+
+   (d.paused?'<div class="banner b-amber">The doctor is away for a short while. Estimates include extra time.</div>':d.delay>0?'<div class="banner b-amber">Running about '+d.delay+' min late. Estimates already include this.</div>':'')+
+   '<p class="sub" style="margin:10px 0 4px">Public board: tokens only, no names.</p><ul class="q">'+(q.length?q.slice(0,12).map(function(p,i){var e=eta(p);return '<li><div class="top1"><span class="pos">'+(i+1)+'</span><a class="tk" href="#/queue/'+esc(p.token)+'">'+esc(p.token)+'</a>'+(p.override?'<span class="pill p-coral">Priority</span>':'')+'<span class="eta">'+(e.ahead===0?'next':e.lo+'–'+e.hi+' min')+'</span></div></li>'}).join(''):'<li class="sub">Nobody is waiting.</li>')+'</ul></div>'+
+   '<div class="card"><h3>How reliable is this estimate?</h3>'+(ac.pct==null?'<p class="sub" style="margin:0">Not enough completed visits yet to score this doctor ('+ac.n+' so far, 5 needed).</p>':'<div class="tile" style="margin-bottom:8px"><div class="k">Within ±10 min</div><div class="v">'+ac.pct+'%</div><div class="n">'+ac.ok+' of '+ac.n+' predictions today</div></div>')+'<p class="sub" style="margin:0">Rule used: (patients ahead × '+avgSvc(d)+' min average) + '+d.delay+' min delay = '+w+' min, shown as '+r[0]+'–'+r[1]+'. This is a simple demo model, not a guarantee.</p></div></div>'+
+   '<aside class="grid" style="gap:14px"><div class="card"><h3>Actions</h3><div class="row"><a class="btn" style="text-decoration:none" href="#/checkin/'+d.id+'">Check in for this doctor</a></div><p class="why">Appointment holders use their booking reference. Walk-ins get a token instantly.</p></div>'+
+   '<div class="card"><h3>Report an issue</h3><label class="f" for="rp-issue" style="margin-top:0">What happened?</label><select id="rp-issue"><option value="Wait estimate was wrong">Wait estimate was wrong</option><option value="Doctor was not in the room">Doctor was not in the room</option><option value="Order of tokens looks unfair">Order of tokens looks unfair</option><option value="Other">Other</option></select><div class="row" style="margin-top:8px"><button class="btn alt" data-act="report" data-doc="'+d.id+'">Submit report (demo)</button></div><p class="why">Reports go to the hospital audit log in this demo.</p></div></aside></div>'}
+
+
+/* ---------- reschedule and cancel (patient and hospital) ---------- */
+function slotOpts(cur){
+  var t=Math.ceil((S.clock+15)/15)*15,arr=[];
+  for(var i=0;i<12;i++)arr.push(t+i*15);
+  if(arr.indexOf(cur)<0)arr.unshift(cur);
+  return arr.map(function(x){return '<option value="'+x+'"'+(x===cur?' selected':'')+'>'+fmt(x)+'</option>'}).join('')}
+function rsForm(p){
+  return '<div class="ovform"><b>Change appointment '+esc(p.ref)+'</b><div class="row"><div style="flex:1;min-width:150px"><label class="f" for="rs-doc">Doctor</label><select id="rs-doc">'+docOptions(p.doctor)+'</select></div><div style="flex:1;min-width:110px"><label class="f" for="rs-slot">New time</label><select id="rs-slot">'+slotOpts(p.slot)+'</select></div></div>'+
+   '<p class="why">Pick a new time or doctor. The reference stays the same.</p><div class="row"><button class="btn sm" data-act="rsconfirm" data-id="'+p.id+'">Save new time</button><button class="btn sm alt" data-act="rscancel">Keep current time</button></div></div>'}
+function cxForm(p){
+  return '<div class="ovform"><b>Cancel appointment '+esc(p.ref)+'?</b> <span class="sub">It will be removed from today\'s list.</span><div class="row" style="margin-top:8px"><button class="btn sm crit" data-act="cxconfirm" data-id="'+p.id+'">Yes, cancel appointment</button><button class="btn sm alt" data-act="cxcancel">Keep appointment</button></div></div>'}
+function apRow(p){
+  var d=doc(p.doctor);
+  var r='<tr><td><b>'+esc(p.ref)+'</b></td><td>'+esc(d.name)+'<div class="sub">'+esc(d.dept)+' · '+esc(d.room)+'</div></td><td>'+fmt(p.slot)+'</td><td><div class="row"><button class="btn sm" data-act="apcheckin" data-id="'+p.id+'">I have arrived: check in</button><button class="btn sm alt" data-act="rsopen" data-id="'+p.id+'">Change time</button><button class="btn sm alt" data-act="cxopen" data-id="'+p.id+'">Cancel</button></div></td></tr>';
+  if(S.rs===p.id)r+='<tr><td colspan="4">'+rsForm(p)+'</td></tr>';
+  if(S.cx===p.id)r+='<tr><td colspan="4">'+cxForm(p)+'</td></tr>';
+  return r}
+function stRow(p,can){
+  var dis=can?'':' disabled';
+  var r='<tr><td>'+esc(p.ref)+'</td><td>'+esc(p.name)+'</td><td>'+esc(doc(p.doctor).name)+'</td><td>'+fmt(p.slot)+'</td><td><div class="row"><button class="btn sm alt" data-act="arrive" data-id="'+p.id+'"'+dis+'>Mark arrived</button><button class="btn sm alt" data-act="rsopen" data-id="'+p.id+'"'+dis+'>Change time</button><button class="btn sm alt" data-act="cxopen" data-id="'+p.id+'"'+dis+'>Cancel</button></div></td></tr>';
+  if(S.rs===p.id)r+='<tr><td colspan="5">'+rsForm(p)+'</td></tr>';
+  if(S.cx===p.id)r+='<tr><td colspan="5">'+cxForm(p)+'</td></tr>';
+  return r}
+function shiftForm(can){
+  return '<div class="ovform" style="margin-top:10px"><b>Doctor delayed? Shift upcoming appointments</b><div class="row"><div style="flex:1;min-width:150px"><label class="f" for="sh-doc">Doctor</label><select id="sh-doc">'+docOptions(S.form['sh-doc'])+'</select></div><div style="flex:1;min-width:90px"><label class="f" for="sh-min">Shift by</label><select id="sh-min">'+[15,30,45,60].map(function(m){return '<option value="'+m+'"'+(String(S.form['sh-min'])===String(m)?' selected':'')+'>'+m+' min</option>'}).join('')+'</select></div></div><div class="row" style="margin-top:8px"><button class="btn sm warn" data-act="shift"'+(can?'':' disabled')+'>Shift appointments</button></div><p class="why">Moves every booked, not-yet-arrived appointment for that doctor later, and sends a simulated SMS to patients who agreed to alerts.</p></div>'}
+function cxList(can){
+  var c=S.patients.filter(function(p){return p.status==='cancelled'});
+  if(!c.length)return '';
+  return '<p class="sub" style="margin:12px 0 4px">Cancelled ('+c.length+')</p><ul class="q">'+c.map(function(p){return '<li><div class="top1"><span class="tk">'+esc(p.ref)+'</span><span>'+esc(p.name)+'</span><span class="sub">'+fmt(p.slot)+'</span><button class="btn sm alt" style="margin-left:auto" data-act="restore" data-id="'+p.id+'"'+(can?'':' disabled')+'>Restore</button></div></li>'}).join('')+'</ul>'}
+function vAppointments(){
+  var booked=S.patients.filter(function(p){return p.status==='booked'}).sort(function(a,b){return a.slot-b.slot});
+  var f=S.form,slots='',t=Math.ceil((S.clock+15)/15)*15;
+  for(var i=0;i<10;i++){slots+='<option value="'+(t+i*15)+'">'+fmt(t+i*15)+'</option>'}
+  return '<h1 class="pg">Appointments</h1><p class="sub">Book a slot, then check in when you arrive. Demo OPD, Madurai · synthetic data</p>'+
+   '<div class="detail" style="margin-top:14px"><div class="card"><h3>Booked for today ('+booked.length+')</h3>'+
+   (booked.length?'<div class="scroll"><table><thead><tr><th>Reference</th><th>Doctor</th><th>Slot</th><th></th></tr></thead><tbody>'+booked.map(apRow).join('')+'</tbody></table></div>':'<p class="sub">No upcoming appointments. Book one on the right.</p>')+
+   '<p class="why">Arrive within '+S.grace+' minutes of your slot to keep your appointment time. After that you join by arrival order. The reason is always shown.</p></div>'+
+   '<div class="card"><h3>Book an appointment</h3><label class="f" for="ap-doc" style="margin-top:0">Doctor</label><select id="ap-doc">'+docOptions(f['ap-doc'])+'</select>'+
+   '<label class="f" for="ap-slot">Time slot</label><select id="ap-slot">'+slots+'</select>'+
+   '<label class="f" for="ap-name">Name (optional)</label><input id="ap-name" autocomplete="off">'+
+   '<label class="f" for="ap-phone">Mobile (optional)</label><input id="ap-phone" inputmode="numeric" placeholder="98765 43210" autocomplete="off">'+
+   '<label class="row" style="margin-top:10px;font-size:13px"><input type="checkbox" id="ap-consent" style="width:auto"> <span>Send me SMS alerts about this appointment (changes and when my turn is near)</span></label>'+
+   '<div style="margin-top:12px"><button class="btn" style="width:100%;padding:11px" data-act="book">Book appointment</button></div><p class="why">Demo booking: nothing is sent to a real hospital system.</p></div></div>'}
+function vCheckin(param){
+  var depts=[];S.doctors.forEach(function(d){if(depts.indexOf(d.dept)<0)depts.push(d.dept)});
+  var f=S.form,dept=f['pt-dept']||depts[0],did=f['pt-doc'];
+  var dl=S.doctors.filter(function(d){return d.dept===dept});if(!dl.some(function(d){return d.id===did}))did=dl[0].id;
+  return '<a class="back" href="#/hospital">← Back to doctors</a><div class="phone-wrap" style="grid-template-columns:minmax(0,520px) minmax(0,1fr)"><div class="card"><h1 class="pg" style="font-size:30px">'+tr('checkin')+'</h1>'+
+   '<label class="f" for="pt-dept">'+tr('dept')+'</label><select id="pt-dept" data-chg="rerender">'+depts.map(function(x){return '<option value="'+esc(x)+'"'+(x===dept?' selected':'')+'>'+esc(x)+'</option>'}).join('')+'</select>'+
+   '<label class="f" for="pt-doc">'+tr('doctor')+'</label><select id="pt-doc">'+docOptions(did,dept)+'</select>'+
+   '<label class="f" for="pt-type">'+tr('visit')+'</label><select id="pt-type" data-chg="rerender"><option value="walk"'+(f['pt-type']!=='appt'?' selected':'')+'>'+tr('walkin')+'</option><option value="appt"'+(f['pt-type']==='appt'?' selected':'')+'>'+tr('appt')+'</option></select>'+
+   (f['pt-type']==='appt'?'<label class="f" for="pt-ref">'+tr('ref')+'</label><input id="pt-ref" placeholder="A-201" autocomplete="off">':'')+
+   '<label class="f" for="pt-name">'+tr('name')+'</label><input id="pt-name" autocomplete="off">'+
+   '<label class="f" for="pt-phone">'+tr('phone')+'</label><input id="pt-phone" inputmode="numeric" placeholder="98765 43210" autocomplete="off">'+
+   '<label class="row" style="margin-top:10px;font-size:13px"><input type="checkbox" id="pt-consent" style="width:auto"> <span>'+tr('consent')+'</span></label>'+
+   (S.form._err?'<div class="banner b-coral" role="alert">'+esc(S.form._err)+'</div>':'')+
+   '<div style="margin-top:14px"><button class="btn" style="width:100%;padding:12px;font-size:16px" data-act="checkin">'+tr('checkin')+'</button></div></div>'+
+   '<div class="grid" style="gap:14px"><div class="card"><h3>What happens next</h3><p class="sub" style="margin:0">You get a token and a page showing patients ahead and a wait range. If you tick the SMS box, a simulated message is sent when your turn is near or the doctor runs late. No phone? The desk can add you.</p></div><div class="card"><h3>Demo appointments</h3><p class="sub" style="margin:0">Choose &ldquo;Appointment&rdquo; and use reference A-201, A-202 or A-203 with the matching doctor (Lakshmi, Venkat, Karthikeyan).</p></div></div></div>'}
+function vQueue(t){
+  var p=byToken(t);if(!p||p.status==='booked')return vMissing('Token not found','This token is not active in this demo. Demo tokens reset when the page reloads.');
+  var d=doc(p.doctor),e=p.status==='waiting'?eta(p):null,acc=accuracy(d);
+  var head='<a class="back" href="#/doctor/'+d.id+'">← Back to '+esc(d.name)+'</a><span class="pill p-grey">'+esc(d.dept)+' · DEMO</span><div class="bigtok" style="margin:6px 0 2px">'+esc(p.token)+'</div><div class="sub">'+esc(d.name)+' · '+esc(d.room)+' · updated '+fmt(S.clock)+'</div>';
+  var st='';
+  if(p.status==='waiting'){
+    st='<div class="grid g4" style="margin:14px 0"><div class="tile"><div class="k">'+tr('ahead')+'</div><div class="v">'+e.ahead+'</div></div><div class="tile"><div class="k">'+tr('wait')+'</div><div class="v" style="font-size:26px">'+(e.ahead===0?'—':e.lo+'–'+e.hi)+'</div><div class="n">'+tr('min')+'</div></div><div class="tile"><div class="k">Checked in</div><div class="v" style="font-size:26px">'+fmt(p.arrival)+'</div></div></div>'+(e.ahead===0?'<div class="banner b-teal">'+tr('next')+'</div>':'')}
+  else if(p.status==='consult')st='<div class="banner b-teal" style="margin:14px 0">'+tr('calling')+' · '+esc(d.room)+'</div>';
+  else if(p.status==='done')st='<div class="banner b-teal" style="margin:14px 0">'+tr('done')+'</div>';
+  else if(p.status==='noshow')st='<div class="banner b-coral" style="margin:14px 0">'+tr('noshow')+'. Please see the desk to rejoin.</div>';
+  else st='<div class="banner b-amber" style="margin:14px 0">You left the queue.</div>';
+  if(d.paused)st+='<div class="banner b-amber">'+tr('paused')+'</div>';else if(d.delay>0&&p.status==='waiting')st+='<div class="banner b-amber">'+tr('late')+' (+'+d.delay+' '+tr('min')+')</div>';
+  var left=head+st+(p.status==='waiting'?'<div class="card"><h3>'+tr('why')+'</h3><p style="margin:0">'+esc(reason(p))+'</p><p class="why">Rule: (patients ahead × '+avgSvc(d)+' min average) + '+d.delay+' min delay = '+e.w+' min, shown as a range. Estimates can change if the doctor is delayed.</p></div>':'');
+  var alerts=p.status==='waiting'?'<div class="card"><h3>SMS alerts</h3>'+(p.consent?'<p style="margin:0 0 8px">On. We message '+esc(mask(p.phone))+' when about '+S.alertAhead+' patients are ahead and when the doctor is late.</p><button class="btn alt sm" data-act="alertsoff" data-id="'+p.id+'">Turn off alerts</button>':'<p class="sub" style="margin:0 0 6px">Off. Add a number to get a message when your turn is near.</p><input id="tk-phone" inputmode="numeric" placeholder="98765 43210" autocomplete="off" style="max-width:220px"> <button class="btn sm" data-act="alertson" data-id="'+p.id+'">Turn on alerts</button>')+'<p class="why">Only used for this visit. Deleted after '+S.retention+' days. Simulated in this demo.</p></div>':'';
+  var mine=S.sms.filter(function(m){return m.token===p.token}).slice(0,3);
+  var msgs=mine.length?'<div class="card"><h3>Messages sent (simulated)</h3>'+mine.map(function(m){return '<div class="sms"><small>'+fmt(m.t)+' · '+esc(m.kind)+'</small><br>'+esc(m.text)+'</div>'}).join('')+'</div>':'';
+  var act='<div class="card"><h3>Actions</h3><div class="row"><a class="btn alt" style="text-decoration:none" href="#/doctor/'+d.id+'">See the doctor\'s board</a>'+(p.status==='waiting'?'<button class="btn alt" data-act="leave" data-id="'+p.id+'">Leave queue</button>':'')+'</div><p class="why">No smartphone or need help? The desk can look up your token. Priority is set only by authorised staff.</p></div>';
+  return '<div class="detail"><div class="grid" style="gap:14px">'+left+'</div><aside class="grid" style="gap:14px">'+alerts+msgs+act+'</aside></div>'}
+function vMissing(h,m){return '<div class="card" style="max-width:560px;margin:30px auto;text-align:center"><h1 class="pg" style="font-size:28px">'+esc(h)+'</h1><p class="sub">'+esc(m)+'</p><a class="btn" style="text-decoration:none" href="#/hospital">Back to doctors</a></div>'}
+function wrapStaff(t,sub,inner){return '<h1 class="pg">'+t+'</h1><p class="sub" style="margin-bottom:14px">'+sub+'</p>'+inner}
+function viewStaff(){
+  var can=S.role==='Reception',canOv=S.role==='Reception'||S.role==='Manager';
+  var h='';
+  if(!can)h+='<div class="banner b-amber" style="margin:0 0 12px">Signed in as '+S.role+'. Queue actions need the Reception role'+(canOv?'; you can set priority overrides.':'.')+'</div>';
+  if(S.syncFail)h+='<div class="banner b-coral" role="alert" style="margin:0 0 12px">Data last updated at '+fmt(S.lastSync)+'. The last import failed, so staff can add tokens by hand. Fix the file under Integration &amp; settings.</div>';
+  var booked=S.patients.filter(function(p){return p.status==='booked'});
+  h+='<div class="grid g2" style="margin-bottom:14px"><div class="card"><h3>Add patient at the desk</h3><p class="sub" style="margin:0 0 6px">For patients without a smartphone. Same queue rules apply.</p>'+
+   '<div class="row"><div style="flex:1;min-width:140px"><label class="f" for="st-name">Name</label><input id="st-name" autocomplete="off"></div>'+
+   '<div style="flex:1;min-width:150px"><label class="f" for="st-doc">Doctor</label><select id="st-doc">'+docOptions(S.form['st-doc'])+'</select></div>'+
+   '<div style="flex:1;min-width:130px"><label class="f" for="st-phone">Mobile (optional)</label><input id="st-phone" inputmode="numeric" autocomplete="off"></div></div>'+
+   '<label class="row" style="margin-top:8px;font-size:13px"><input type="checkbox" id="st-consent" style="width:auto"><span>Patient agreed to SMS alerts</span></label>'+
+   '<div class="row" style="margin-top:10px"><button class="btn" data-act="addwalk"'+(can?'':' disabled')+'>Create token</button></div></div>'+
+   '<div class="card"><h3>Expected today ('+booked.length+')</h3><p class="sub" style="margin:0 0 6px">Booked, not yet arrived.</p>'+
+   (booked.length?'<div class="scroll"><table><thead><tr><th>Ref</th><th>Patient</th><th>Doctor</th><th>Slot</th><th></th></tr></thead><tbody>'+booked.map(function(p){return stRow(p,can)}).join('')+'</tbody></table></div>':'<p class="sub">Everyone expected has arrived.</p>')+shiftForm(can)+cxList(can)+'</div></div>';
+  h+='<div class="grid g3">'+S.doctors.map(function(d){
+    var q=waiting(d),ns=S.patients.filter(function(p){return p.doctor===d.id&&p.status==='noshow'});
+    var st=d.paused?'<span class="pill p-amber">Paused</span>':(d.current?'<span class="pill p-teal">Serving</span>':'<span class="pill p-grey">Ready for next</span>');
+    var lt=d.delay>0?' <span class="pill p-coral">Late +'+d.delay+' min</span>':'';
+    var c=d.current;
+    var out='<section class="card doc" aria-label="'+esc(d.name)+'"><div class="doc-h"><div><h3 style="margin:0">'+esc(d.name)+'</h3><div class="sub">'+esc(d.dept)+' · '+esc(d.room)+' · avg service '+avgSvc(d)+' min</div></div><div>'+st+lt+'</div></div>';
+    out+=c?'<div class="serving"><div class="sub" style="color:#cfe8e6">Now serving</div><div class="t">'+esc(c.token)+'</div><div>'+esc(c.name)+' · started '+fmt(c.start)+' · '+(S.clock-c.start)+' min'+(c.calls>1?' · called '+c.calls+'×':'')+'</div></div>':'<div class="serving idle">Nobody in the room.</div>';
+    out+='<div class="row">'+
+      '<button class="btn sm" data-act="next" data-doc="'+d.id+'"'+((can&&!d.paused&&q.length)?'':' disabled')+'>Call next</button>'+
+      '<button class="btn sm alt" data-act="again" data-doc="'+d.id+'"'+((can&&c&&c.calls<2)?'':' disabled')+'>Call again</button>'+
+      '<button class="btn sm crit" data-act="noshow" data-doc="'+d.id+'" title="Allowed after two calls"'+((can&&c&&c.calls>=2)?'':' disabled')+'>No-show</button>'+
+      '<button class="btn sm warn" data-act="pause" data-doc="'+d.id+'"'+(can?'':' disabled')+'>'+(d.paused?'Resume':'Doctor paused')+'</button>'+
+      '<button class="btn sm alt" data-act="late" data-doc="'+d.id+'"'+(can?'':' disabled')+'>+15 min late</button>'+
+      (d.delay>0?'<button class="btn sm alt" data-act="onTime" data-doc="'+d.id+'"'+(can?'':' disabled')+'>Back on time</button>':'')+'</div>';
+    out+='<div><b>Waiting ('+q.length+')</b></div><ul class="q">'+(q.length?q.map(function(p,i){
+      var e=eta(p);
+      var ovf=(S.ovr===p.id)?'<div class="ovform"><label class="f" for="ov-reason" style="margin-top:0">Reason (required)</label><select id="ov-reason"><option value="">Choose a reason</option><option value="Emergency (clinician decision)">Emergency (clinician decision)</option><option value="Elderly or frail">Elderly or frail</option><option value="Pregnant">Pregnant</option><option value="Differently-abled">Differently-abled</option><option value="Other (add a note)">Other (add a note)</option></select><label class="f" for="ov-note">Note</label><input id="ov-note" autocomplete="off"><div class="row" style="margin-top:8px"><button class="btn sm crit" data-act="ovconfirm" data-id="'+p.id+'">Move to front</button><button class="btn sm alt" data-act="ovcancel">Cancel</button></div></div>':'';
+      return '<li class="'+(p.override?'ov':'')+'"><div class="top1"><span class="pos">'+(i+1)+'</span><span class="tk">'+esc(p.token)+'</span><span>'+esc(p.name)+'</span>'+
+        (p.type==='appt'?'<span class="pill p-teal">Appt '+fmt(p.slot)+'</span>':'<span class="pill p-grey">Walk-in</span>')+(p.override?'<span class="pill p-coral">Priority</span>':'')+(p.consent?'<span class="pill p-grey">SMS</span>':'')+
+        '<span class="eta">'+(e.ahead===0?'next':e.lo+'–'+e.hi+' min')+'</span></div>'+
+        '<div class="meta">'+esc(reason(p))+'</div>'+
+        '<div class="row" style="margin-top:5px">'+(p.override?'<button class="btn sm alt" data-act="ovclear" data-id="'+p.id+'"'+(canOv?'':' disabled')+'>Remove priority</button>':'<button class="btn sm alt" data-act="ovopen" data-id="'+p.id+'"'+(canOv?'':' disabled')+'>Priority…</button>')+'</div>'+ovf+'</li>'}).join(''):'<li class="sub">Queue is empty.</li>')+'</ul>';
+    if(ns.length)out+='<div><b>No-shows</b></div><ul class="q">'+ns.map(function(p){return '<li><div class="top1"><span class="tk">'+esc(p.token)+'</span><span>'+esc(p.name)+'</span><button class="btn sm alt" style="margin-left:auto" data-act="reinsert" data-id="'+p.id+'"'+(can?'':' disabled')+'>Re-insert</button></div></li>'}).join('')+'</ul>';
+    return out+'</section>'}).join('')+'</div>';
+  return h}
+
+function stats(){
+  var done=S.patients.filter(function(p){return p.status==='done'});
+  var waits=done.map(function(p){return p.called-p.arrival});
+  var errs=done.filter(function(p){return p.predWait!=null}).map(function(p){return Math.abs((p.called-p.arrival)-p.predWait)});
+  var called=S.patients.filter(function(p){return p.calls>0}).length,ns=S.patients.filter(function(p){return p.status==='noshow'}).length;
+  return {served:done.length,waits:waits,med:median(waits),p90:pct(waits,.9),err:median(errs),ns:ns,nsRate:called?ns/called*100:0,
+    sms:S.sms.length,ov:S.patients.filter(function(p){return p.override}).length,inq:S.patients.filter(function(p){return p.status==='waiting'}).length}}
+function viewAnalytics(){
+  var s=stats(),v=function(x,u){return x==null?'—':(Math.round(x*10)/10)+(u||'')};
+  var delta=s.med==null?null:s.med-S.baseline;
+  var tiles=[['Median wait',v(s.med,' min'),'check-in to called'],['90th percentile wait',v(s.p90,' min'),'worst-case view'],['Wait-time error',v(s.err,' min'),'median |actual − predicted|'],['No-show rate',v(s.nsRate,'%'),s.ns+' of called patients'],['Patients served',s.served,'completed today'],['In queue now',s.inq,'waiting for a doctor'],['Alerts sent',s.sms,'simulated SMS'],['Priority overrides',s.ov,'each one logged with a reason']];
+  var buckets=[['0–9',0,9],['10–19',10,19],['20–29',20,29],['30–39',30,39],['40+',40,999]].map(function(b){return [b[0],s.waits.filter(function(w){return w>=b[1]&&w<=b[2]}).length]});
+  var mx=Math.max.apply(null,buckets.map(function(b){return b[1]}).concat([1]));
+  var qd=S.doctors.map(function(d){return [d.name,waiting(d).length]});var qm=Math.max.apply(null,qd.map(function(x){return x[1]}).concat([1]));
+  return '<div class="grid g4">'+tiles.map(function(t){return '<div class="tile"><div class="k">'+t[0]+'</div><div class="v">'+t[1]+'</div><div class="n">'+t[2]+'</div></div>'}).join('')+'</div>'+
+   '<div class="grid g2" style="margin-top:14px">'+
+   '<div class="card"><h3>Baseline vs pilot</h3><p class="sub" style="margin:0 0 8px">Enter the hospital\'s measured baseline. The 45 min shown is an example only.</p><label class="f" for="baseline" style="margin-top:0">Baseline median wait (min)</label><input id="baseline" type="number" min="0" value="'+S.baseline+'" data-chg="baseline" style="max-width:140px">'+
+   '<p style="margin:12px 0 0;font-size:16px">'+(delta==null?'No completed visits yet.':'<span style="color:'+(delta<=0?'var(--good)':'var(--coral-ink)')+';font-weight:700">Pilot median is '+v(s.med,' min')+', '+(delta<=0?v(-delta,' min')+' below':v(delta,' min')+' above')+' the baseline.</span>')+'</p><p class="sub">Studies show shorter registration waits, not a proven cut in total wait; the pilot has to measure it.</p></div>'+
+   '<div class="card"><h3>Waiting now, by doctor</h3><div class="bars">'+qd.map(function(x){return '<div class="bar"><span>'+esc(x[0].replace('Dr. ',''))+'</span><div class="track"><div class="fill" style="width:'+(x[1]/qm*100)+'%"></div></div><b>'+x[1]+'</b></div>'}).join('')+'</div></div>'+
+   '<div class="card"><h3>Wait distribution (completed visits)</h3><div class="bars">'+buckets.map(function(b){return '<div class="bar"><span>'+b[0]+' min</span><div class="track"><div class="fill" style="width:'+(b[1]/mx*100)+'%;background:var(--coral)"></div></div><b>'+b[1]+'</b></div>'}).join('')+'</div></div>'+
+   '<div class="card"><h3>How these are counted</h3><dl class="kv"><dt>Wait</dt><dd>called time − check-in time</dd><dt>Wait-time error</dt><dd>|actual wait − wait predicted at check-in|</dd><dt>No-show rate</dt><dd>no-shows ÷ patients called</dd><dt>Report</dt><dd>median and 90th percentile, never only averages</dd></dl></div></div>'}
+
+function viewAdmin(){
+  var ok=S.role==='Admin',ro=ok?'':' disabled';
+  var h='<div class="grid g2">';
+  h+='<div class="card"><h3>HIMS connector</h3><p class="sub" style="margin:0 0 8px">FlowBridge sits next to the hospital system. Start with a scheduled CSV or a mock API; go live only after the hospital approves.</p>'+
+   '<dl class="kv"><dt>Mode</dt><dd><select id="set-mode" data-chg="mode" style="max-width:220px"'+ro+'><option value="CSV"'+(S.mode==='CSV'?' selected':'')+'>Scheduled CSV import</option><option value="API"'+(S.mode==='API'?' selected':'')+'>Mock API (simulated)</option></select></dd>'+
+   '<dt>Status</dt><dd>'+(S.syncFail?'<span class="pill p-coral">Import failed</span>':'<span class="pill p-good">OK</span>')+' last updated '+fmt(S.lastSync)+'</dd></dl>'+
+   '<div class="row" style="margin-top:10px"><button class="btn sm" data-act="sync"'+ro+'>Sync now</button><button class="btn sm alt" data-act="fail"'+ro+'>'+(S.syncFail?'Clear simulated failure':'Simulate import failure')+'</button></div>'+
+   '<label class="f" for="csv-text">Paste appointments (ref, patient, doctor, time)</label><textarea id="csv-text" rows="4" placeholder="A-205,P. Ganesh,Dr. R. Lakshmi,10:40"'+ro+'></textarea>'+
+   '<div class="row" style="margin-top:8px"><button class="btn sm" data-act="csv"'+ro+'>Import</button><button class="btn sm alt" data-act="csvsample"'+ro+'>Load sample</button></div>'+
+   (S.csvMsg?'<p class="why" role="status">'+esc(S.csvMsg)+'</p>':'')+
+   (ok?'':'<p class="why">Switch the role to Admin (top right) to change this.</p>')+'</div>';
+  h+='<div class="card"><h3>Queue rules (set by the hospital)</h3>'+
+   '<label class="f" for="set-rule" style="margin-top:0">Order rule</label><select id="set-rule" data-chg="rule"'+ro+'><option value="slot"'+(S.rule==='slot'?' selected':'')+'>Appointment slot time, then walk-ins by arrival</option><option value="arrival"'+(S.rule==='arrival'?' selected':'')+'>Strict arrival order</option></select>'+
+   '<div class="row"><div style="flex:1;min-width:120px"><label class="f" for="set-grace">Grace window (min)</label><input id="set-grace" type="number" min="0" max="60" value="'+S.grace+'" data-chg="grace"'+ro+'></div>'+
+   '<div style="flex:1;min-width:120px"><label class="f" for="set-svc">Default service time (min)</label><input id="set-svc" type="number" min="3" max="30" value="'+S.svcDefault+'" data-chg="svc"'+ro+'></div>'+
+   '<div style="flex:1;min-width:120px"><label class="f" for="set-alert">SMS when patients ahead ≤</label><input id="set-alert" type="number" min="0" max="10" value="'+S.alertAhead+'" data-chg="alert"'+ro+'></div></div>'+
+   '<p class="why">A late appointment patient (past the grace window) is queued by arrival. Priority overrides always need a reason and are logged. The system never triages.</p></div>';
+  h+='<div class="card"><h3>Privacy (DPDP Act 2023)</h3><dl class="kv"><dt>Shared fields</dt><dd>token, department, appointment, status, timestamps</dd><dt>Never shared</dt><dd>medical records, diagnoses</dd><dt>Public screens</dt><dd>token only, no names</dd><dt>Alerts</dt><dd>only with consent, shown as opt-in at check-in</dd><dt>Access</dt><dd>by role, every action logged</dd></dl>'+
+   '<label class="f" for="set-ret">Retention for phone numbers and visit data (days)</label><input id="set-ret" type="number" min="1" value="'+S.retention+'" data-chg="ret" style="max-width:140px"'+ro+'></div>';
+  h+='<div class="card"><h3>Simulated SMS / WhatsApp outbox ('+S.sms.length+')</h3>'+(S.sms.length?S.sms.slice(0,8).map(function(m){return '<div class="sms"><small>'+fmt(m.t)+' · to '+esc(m.to)+' · '+esc(m.kind)+' · simulated</small><br>'+esc(m.text)+'</div>'}).join(''):'<p class="sub">Nothing sent yet. Check in with an SMS number, or press +15 min late for a doctor.</p>')+'</div></div>';
+  h+='<div class="card" style="margin-top:14px"><h3>Audit log</h3><div class="scroll"><table><thead><tr><th>Time</th><th>Who</th><th>Action</th><th>Detail</th></tr></thead><tbody>'+S.audit.slice(0,25).map(function(a){return '<tr><td>'+fmt(a.t)+'</td><td>'+esc(a.role)+'</td><td>'+esc(a.action)+'</td><td>'+esc(a.detail)+'</td></tr>'}).join('')+'</tbody></table></div></div>';
+  return h}
+
+/* ---------- render ---------- */
+function saveForm(){
+  var v=$('#view');if(!v)return;
+  v.querySelectorAll('input[id],select[id],textarea[id]').forEach(function(el){S.form[el.id]=el.type==='checkbox'?el.checked:el.value})}
+function restoreForm(){
+  var v=$('#view');
+  v.querySelectorAll('input[id],select[id],textarea[id]').forEach(function(el){
+    if(!(el.id in S.form))return;
+    if(el.type==='checkbox')el.checked=!!S.form[el.id];
+    else if(el.id==='pt-view'||el.id.indexOf('set-')===0||el.id==='baseline')return;
+    else el.value=S.form[el.id]})}
+function parseRoute(){var h=location.hash.replace(/^#\/?/,'').split('?')[0].split('/');return {name:h[0]||'home',arg:decodeURIComponent(h[1]||'')}}
+var TITLES={home:'FlowBridge: Know your turn',hospital:'Doctors & queues | FlowBridge',checkin:'Check in | FlowBridge',appointments:'Appointments | FlowBridge',how:'How it works | FlowBridge',staff:'Staff dashboard | FlowBridge',analytics:'Analytics | FlowBridge',settings:'Integration & settings | FlowBridge',doctor:'Doctor queue | FlowBridge',queue:'Your token | FlowBridge'};
+/* ---------- full-page translation (Tamil, Hindi) ---------- */
+var X={},P=[],ORIG=new WeakMap();
+function L(en,ta,hi){X[en]=[ta,hi]}
+function R(re,ta,hi){P.push([re,ta,hi])}
+/* shell */
+L('Skip to content','உள்ளடக்கத்துக்குச் செல்','सामग्री पर जाएँ');
+L("Plug in, don't replace",'இணையுங்கள், மாற்ற வேண்டாம்','जोड़ें, बदलें नहीं');
+L('Doctors & queues','மருத்துவர்கள் & வரிசைகள்','डॉक्टर और कतारें');
+L('Appointments','முன்பதிவுகள்','अपॉइंटमेंट');
+L('Check in','பதிவு செய்க','चेक-इन करें');
+L('How it works','இது எவ்வாறு செயல்படுகிறது','यह कैसे काम करता है');
+L('Staff','பணியாளர்கள்','स्टाफ');
+L('Analytics','பகுப்பாய்வு','एनालिटिक्स');
+L('Integration','ஒருங்கிணைப்பு','इंटीग्रेशन');
+L('Log out','வெளியேறு','लॉग आउट');
+L('PROTOTYPE · DEMO DATA','முன்மாதிரி · டெமோ தரவு','प्रोटोटाइप · डेमो डेटा');
+L('All patients, numbers and doctors are made up. The hospital connection and SMS are simulated. FlowBridge never decides clinical priority; authorised staff do.','எல்லா நோயாளிகள், எண்கள், மருத்துவர்கள் கற்பனையானவை. மருத்துவமனை இணைப்பும் SMS-உம் உருவகப்படுத்தப்பட்டவை. மருத்துவ முன்னுரிமையை FlowBridge ஒருபோதும் தீர்மானிக்காது; அங்கீகரிக்கப்பட்ட பணியாளர்களே தீர்மானிப்பார்கள்.','सभी मरीज़, नंबर और डॉक्टर काल्पनिक हैं। अस्पताल कनेक्शन और SMS सिम्युलेटेड हैं। FlowBridge कभी चिकित्सकीय प्राथमिकता तय नहीं करता; अधिकृत स्टाफ करते हैं।');
+L('Add-on queue and patient-flow layer for hospital OPDs.','மருத்துவமனை புறநோயாளி பிரிவுகளுக்கான கூடுதல் வரிசை மற்றும் நோயாளி ஓட்ட அடுக்கு.','अस्पताल OPD के लिए ऐड-ऑन कतार और मरीज़-प्रवाह परत।');
+L('Course prototype, Strategic Product Management, TSM Madurai.','பாடத் திட்ட முன்மாதிரி, ஸ்ட்ரேடஜிக் ப்ராடக்ட் மேனேஜ்மென்ட், TSM மதுரை.','कोर्स प्रोटोटाइप, स्ट्रैटेजिक प्रोडक्ट मैनेजमेंट, TSM मदुरै।');
+L('Explore','ஆராய்க','देखें');
+L('Good to know','அறிந்திருக்க','जानने योग्य');
+L('Synthetic data only. Not medical advice.','செயற்கைத் தரவு மட்டுமே. மருத்துவ ஆலோசனை அல்ல.','केवल कृत्रिम डेटा। चिकित्सा सलाह नहीं।');
+L('Built with privacy in mind (DPDP Act 2023): tokens, not names, on public screens.','தனியுரிமையை மனதில் கொண்டு உருவாக்கப்பட்டது (DPDP சட்டம் 2023): பொதுத் திரைகளில் பெயர்கள் அல்ல, டோக்கன்கள்.','गोपनीयता को ध्यान में रखकर बनाया गया (DPDP अधिनियम 2023): सार्वजनिक स्क्रीन पर नाम नहीं, टोकन।');
+L('Demo controls','டெமோ கட்டுப்பாடுகள்','डेमो कंट्रोल');
+L('Jump time forward to watch queues move. In a real hospital this is the live clock.','வரிசைகள் நகர்வதைப் பார்க்க நேரத்தை முன்னே தள்ளுங்கள். உண்மையான மருத்துவமனையில் இது நேரடி கடிகாரம்.','कतारें चलती देखने के लिए समय आगे बढ़ाएँ। असली अस्पताल में यह लाइव घड़ी होती है।');
+L('+5 min','+5 நிமிடம்','+5 मिनट');
+L('+15 min','+15 நிமிடம்','+15 मिनट');
+L('Auto-run','தானியங்கி','ऑटो-रन');
+L('Autopilot','ஆட்டோபைலட்','ऑटोपायलट');
+L('Signed in as','உள்நுழைந்தவர்','इस रूप में साइन इन');
+L('Reset demo','டெமோ மீட்டமை','डेमो रीसेट');
+/* home */
+L('Hospital OPD queue add-on · prototype','மருத்துவமனை புறநோயாளி வரிசை கூடுதல் வசதி · முன்மாதிரி','अस्पताल OPD कतार ऐड-ऑन · प्रोटोटाइप');
+L('Know your turn, without the crowding.','கூட்டம் இல்லாமல், உங்கள் முறையை அறியுங்கள்.','भीड़ के बिना, अपनी बारी जानें।');
+L("FlowBridge sits on top of the hospital's existing system. See your token, how many patients are ahead and an honest wait range, in Tamil, English or Hindi. No new software for doctors to learn.",'FlowBridge மருத்துவமனையின் தற்போதைய அமைப்புக்கு மேல் இயங்குகிறது. உங்கள் டோக்கன், முன்னால் எத்தனை நோயாளிகள், நேர்மையான காத்திருப்பு வரம்பு ஆகியவற்றை தமிழ், ஆங்கிலம் அல்லது ஹிந்தியில் பாருங்கள். மருத்துவர்கள் புதிய மென்பொருள் கற்க வேண்டியதில்லை.','FlowBridge अस्पताल की मौजूदा प्रणाली के ऊपर काम करता है। अपना टोकन, आगे कितने मरीज़ हैं और प्रतीक्षा की ईमानदार सीमा तमिल, अंग्रेज़ी या हिंदी में देखें। डॉक्टरों को कोई नया सॉफ़्टवेयर नहीं सीखना पड़ता।');
+L("Find a doctor's queue",'மருத்துவர் வரிசையைக் காண்க','डॉक्टर की कतार देखें');
+L('Check in now','இப்போது பதிவு செய்க','अभी चेक-इन करें');
+L('Live queues at Demo OPD, Madurai','டெமோ OPD, மதுரையில் நேரடி வரிசைகள்','डेमो OPD, मदुरै में लाइव कतारें');
+L('Demo data. Every status shows when it was last updated.','டெமோ தரவு. ஒவ்வொரு நிலையும் கடைசியாக எப்போது புதுப்பிக்கப்பட்டது என்று காட்டும்.','डेमो डेटा। हर स्थिति बताती है कि वह आखिरी बार कब अपडेट हुई।');
+L('Built on transparency','வெளிப்படைத்தன்மையின் அடிப்படையில்','पारदर्शिता पर आधारित');
+L('We show what we know, how it was worked out, and what we do not know.','எங்களுக்குத் தெரிந்தது, அது எப்படி கணக்கிடப்பட்டது, தெரியாதது ஆகியவற்றைக் காட்டுகிறோம்.','हम दिखाते हैं कि हम क्या जानते हैं, यह कैसे निकाला गया, और क्या नहीं जानते।');
+L('Ranges, not promises','வாக்குறுதி அல்ல, வரம்புகள்','वादे नहीं, सीमाएँ');
+L('Wait is shown as a range and widens when a doctor runs late.','காத்திருப்பு ஒரு வரம்பாகக் காட்டப்படும்; மருத்துவர் தாமதமானால் வரம்பு விரியும்.','प्रतीक्षा एक सीमा के रूप में दिखती है और डॉक्टर के देर होने पर बढ़ जाती है।');
+L('Reasons shown','காரணங்கள் காட்டப்படும்','कारण दिखाए जाते हैं');
+L('Every queue position says why: appointment slot, arrival time or a logged priority.','ஒவ்வொரு வரிசை நிலையும் காரணத்தைச் சொல்லும்: முன்பதிவு நேரம், வருகை நேரம் அல்லது பதிவு செய்யப்பட்ட முன்னுரிமை.','हर कतार स्थिति कारण बताती है: अपॉइंटमेंट स्लॉट, आगमन समय या दर्ज प्राथमिकता।');
+L('Privacy first','முதலில் தனியுரிமை','पहले गोपनीयता');
+L('Tokens on public screens. Alerts only with consent. Medical records never touched.','பொதுத் திரைகளில் டோக்கன்கள் மட்டும். ஒப்புதலுடன் மட்டுமே எச்சரிக்கைகள். மருத்துவப் பதிவுகள் தொடப்படாது.','सार्वजनिक स्क्रीन पर केवल टोकन। अलर्ट सिर्फ सहमति से। मेडिकल रिकॉर्ड को कभी नहीं छुआ जाता।');
+L('Works beside the hospital system via CSV or API. If the link fails, staff can still add tokens by hand.','CSV அல்லது API மூலம் மருத்துவமனை அமைப்புடன் இணைந்து செயல்படும். இணைப்பு தோல்வியுற்றால், பணியாளர்கள் கையால் டோக்கன் சேர்க்கலாம்.','CSV या API के जरिए अस्पताल प्रणाली के साथ चलता है। लिंक फेल हो तो स्टाफ हाथ से टोकन जोड़ सकते हैं।');
+L('Try the prototype','முன்மாதிரியை முயற்சிக்கவும்','प्रोटोटाइप आज़माएँ');
+L('Check in as a walk-in','நேரடி வருகையாளராக பதிவு செய்க','वॉक-इन के रूप में चेक-इन करें');
+L("See a doctor's public board",'மருத்துவரின் பொது பலகையைப் பார்க்க','डॉक्टर का सार्वजनिक बोर्ड देखें');
+L('Open the staff dashboard','பணியாளர் டாஷ்போர்டைத் திற','स्टाफ डैशबोर्ड खोलें');
+L('View analytics','பகுப்பாய்வைப் பார்க்க','एनालिटिक्स देखें');
+R(/^Open a patient's token page \((.+)\)$/,'நோயாளியின் டோக்கன் பக்கத்தைத் திற ($1)','मरीज़ का टोकन पेज खोलें ($1)');
+L('Tip: open the Demo controls (bottom right) to move time forward, then press “+15 min late” for a doctor on the Staff page and watch every range update.','குறிப்பு: நேரத்தை முன்னே நகர்த்த டெமோ கட்டுப்பாடுகளை (கீழ் வலது) திறந்து, பணியாளர் பக்கத்தில் ஒரு மருத்துவருக்கு “+15 நிமிடம் தாமதம்” அழுத்தி ஒவ்வொரு வரம்பும் மாறுவதைப் பாருங்கள்.','सुझाव: समय आगे बढ़ाने के लिए डेमो कंट्रोल (नीचे दाएँ) खोलें, फिर स्टाफ पेज पर किसी डॉक्टर के लिए “+15 मिनट देरी” दबाएँ और हर सीमा को बदलते देखें।');
+/* doctor cards and common fragments */
+L('In consultation','ஆலோசனையில்','परामर्श में');
+L('Ready','தயார்','तैयार');
+L('Doctor away briefly','மருத்துவர் சற்று நேரம் இல்லை','डॉक्टर कुछ देर के लिए बाहर');
+R(/^Running late \+(\d+) min$/,'தாமதம் +$1 நிமிடம்','देरी +$1 मिनट');
+L('waiting','காத்திருப்பு','प्रतीक्षा में');
+L('min if you arrive now','நிமிடம், இப்போது வந்தால்','मिनट, अभी पहुँचें तो');
+L('min per patient','நிமிடம் / நோயாளி','मिनट प्रति मरीज़');
+R(/^Room (\d+)$/,'அறை $1','कक्ष $1');
+R(/^updated (\d\d:\d\d)$/,'புதுப்பிப்பு $1','अपडेट $1');
+L('Demo OPD, Madurai','டெமோ OPD, மதுரை','डेमो OPD, मदुरै');
+L('synthetic data','செயற்கைத் தரவு','कृत्रिम डेटा');
+L('DEMO','டெமோ','डेमो');
+L('All','அனைத்தும்','सभी');
+R(/^(\d+)–(\d+) min$/,'$1–$2 நிமிடம்','$1–$2 मिनट');
+R(/^([\d.]+) min$/,'$1 நிமிடம்','$1 मिनट');
+R(/^(\d+)\+ min$/,'$1+ நிமிடம்','$1+ मिनट');
+/* back buttons */
+L('← Back','← பின்செல்','← वापस');
+L('← Back to doctors','← மருத்துவர்களுக்குத் திரும்பு','← डॉक्टरों पर वापस');
+L('Back to doctors','மருத்துவர்களுக்குத் திரும்பு','डॉक्टरों पर वापस');
+R(/^← Back to (.+)$/,'← $1 பக்கத்துக்குத் திரும்பு','← $1 पर वापस');
+/* doctor page */
+L('Queue right now','தற்போதைய வரிசை','अभी की कतार');
+L('Waiting','காத்திருப்பு','प्रतीक्षा में');
+L('Now serving','இப்போது பார்ப்பது','अभी देख रहे हैं');
+L('If you arrive now','இப்போது வந்தால்','अभी पहुँचें तो');
+L('Avg per patient','சராசரி / நோயாளி','औसत प्रति मरीज़');
+L('The doctor is away for a short while. Estimates include extra time.','மருத்துவர் சிறிது நேரம் இல்லை. மதிப்பீடுகளில் கூடுதல் நேரம் சேர்க்கப்பட்டுள்ளது.','डॉक्टर कुछ देर के लिए बाहर हैं। अनुमान में अतिरिक्त समय शामिल है।');
+R(/^Running about (\d+) min late\. Estimates already include this\.$/,'சுமார் $1 நிமிடம் தாமதமாகிறது. மதிப்பீடுகளில் இது ஏற்கனவே சேர்க்கப்பட்டுள்ளது.','लगभग $1 मिनट देर से चल रहे हैं। अनुमान में यह पहले से शामिल है।');
+L('Public board: tokens only, no names.','பொது பலகை: டோக்கன்கள் மட்டும், பெயர்கள் இல்லை.','सार्वजनिक बोर्ड: केवल टोकन, कोई नाम नहीं।');
+L('next','அடுத்து','अगला');
+L('Priority','முன்னுரிமை','प्राथमिकता');
+L('Nobody is waiting.','யாரும் காத்திருக்கவில்லை.','कोई प्रतीक्षा में नहीं।');
+L('How reliable is this estimate?','இந்த மதிப்பீடு எவ்வளவு நம்பகமானது?','यह अनुमान कितना भरोसेमंद है?');
+R(/^Not enough completed visits yet to score this doctor \((\d+) so far, 5 needed\)\.$/,'இந்த மருத்துவரை மதிப்பிட போதுமான முடிந்த வருகைகள் இல்லை (இதுவரை $1, 5 தேவை).','इस डॉक्टर को स्कोर करने के लिए अभी पर्याप्त पूर्ण विज़िट नहीं हैं (अब तक $1, 5 चाहिए)।');
+L('Within ±10 min','±10 நிமிடத்துக்குள்','±10 मिनट के भीतर');
+R(/^(\d+) of (\d+) predictions today$/,'இன்றைய $2 கணிப்புகளில் $1','आज की $2 भविष्यवाणियों में से $1');
+R(/^Rule used: \(patients ahead × (\d+) min average\) \+ (\d+) min delay = (\d+) min, shown as (\d+)–(\d+)\. This is a simple demo model, not a guarantee\.$/,'பயன்படுத்திய விதி: (முன்னுள்ள நோயாளிகள் × $1 நிமிட சராசரி) + $2 நிமிட தாமதம் = $3 நிமிடம், $4–$5 என்று காட்டப்படும். இது எளிய டெமோ மாதிரி, உறுதிமொழி அல்ல.','उपयोग किया गया नियम: (आगे के मरीज़ × $1 मिनट औसत) + $2 मिनट देरी = $3 मिनट, $4–$5 के रूप में दिखाया गया। यह एक सरल डेमो मॉडल है, गारंटी नहीं।');
+L('Actions','செயல்கள்','कार्रवाइयाँ');
+L('Check in for this doctor','இந்த மருத்துவருக்குப் பதிவு செய்க','इस डॉक्टर के लिए चेक-इन करें');
+L('Appointment holders use their booking reference. Walk-ins get a token instantly.','முன்பதிவு செய்தவர்கள் தங்கள் முன்பதிவு எண்ணைப் பயன்படுத்துவார்கள். நேரடி வருகையாளர்களுக்கு உடனே டோக்கன் கிடைக்கும்.','अपॉइंटमेंट वाले बुकिंग संदर्भ का उपयोग करें। वॉक-इन को तुरंत टोकन मिलता है।');
+L('Report an issue','சிக்கலைப் புகாரளிக்க','समस्या रिपोर्ट करें');
+L('What happened?','என்ன நடந்தது?','क्या हुआ?');
+L('Submit report (demo)','புகாரை அனுப்புக (டெமோ)','रिपोर्ट भेजें (डेमो)');
+L('Reports go to the hospital audit log in this demo.','இந்த டெமோவில் புகார்கள் மருத்துவமனை தணிக்கைப் பதிவுக்குச் செல்லும்.','इस डेमो में रिपोर्ट अस्पताल के ऑडिट लॉग में जाती हैं।');
+L('Doctor not found','மருத்துவர் கிடைக்கவில்லை','डॉक्टर नहीं मिले');
+L('That doctor is not in this demo.','அந்த மருத்துவர் இந்த டெமோவில் இல்லை.','वह डॉक्टर इस डेमो में नहीं है।');
+/* appointments */
+L('Book a slot, then check in when you arrive. Demo OPD, Madurai','ஒரு நேரத்தைப் பதிவு செய்து, வந்ததும் பதிவு செய்யுங்கள். டெமோ OPD, மதுரை','स्लॉट बुक करें, फिर पहुँचने पर चेक-इन करें। डेमो OPD, मदुरै');
+R(/^Booked for today \((\d+)\)$/,'இன்றைக்கு முன்பதிவு ($1)','आज के लिए बुक ($1)');
+L('Reference','எண்','संदर्भ');
+L('Doctor','மருத்துவர்','डॉक्टर');
+L('Slot','நேரம்','स्लॉट');
+L('I have arrived: check in','நான் வந்துவிட்டேன்: பதிவு செய்க','मैं पहुँच गया: चेक-इन');
+L('No upcoming appointments. Book one on the right.','வரவிருக்கும் முன்பதிவுகள் இல்லை. வலப்புறம் ஒன்றைப் பதிவு செய்யுங்கள்.','कोई आगामी अपॉइंटमेंट नहीं। दाईं ओर एक बुक करें।');
+R(/^Arrive within (\d+) minutes of your slot to keep your appointment time\. After that you join by arrival order\. The reason is always shown\.$/,'உங்கள் முன்பதிவு நேரத்தைத் தக்கவைக்க நேரத்துக்கு $1 நிமிடத்துக்குள் வாருங்கள். அதன் பிறகு வருகை வரிசையில் சேருவீர்கள். காரணம் எப்போதும் காட்டப்படும்.','अपना अपॉइंटमेंट समय बनाए रखने के लिए स्लॉट के $1 मिनट के भीतर पहुँचें। उसके बाद आप आगमन क्रम से जुड़ते हैं। कारण हमेशा दिखाया जाता है।');
+L('Book an appointment','முன்பதிவு செய்க','अपॉइंटमेंट बुक करें');
+L('Time slot','நேர இடைவெளி','समय स्लॉट');
+L('Name (optional)','பெயர் (விருப்பம்)','नाम (वैकल्पिक)');
+L('Book appointment','முன்பதிவு செய்க','अपॉइंटमेंट बुक करें');
+L('Demo booking: nothing is sent to a real hospital system.','டெமோ முன்பதிவு: உண்மையான மருத்துவமனை அமைப்புக்கு எதுவும் அனுப்பப்படாது.','डेमो बुकिंग: असली अस्पताल प्रणाली को कुछ नहीं भेजा जाता।');
+/* check-in */
+L('What happens next','அடுத்து என்ன நடக்கும்','आगे क्या होगा');
+L('You get a token and a page showing patients ahead and a wait range. If you tick the SMS box, a simulated message is sent when your turn is near or the doctor runs late. No phone? The desk can add you.','உங்களுக்கு ஒரு டோக்கனும், முன்னுள்ள நோயாளிகளையும் காத்திருப்பு வரம்பையும் காட்டும் பக்கமும் கிடைக்கும். SMS பெட்டியைத் தேர்ந்தால், உங்கள் முறை நெருங்கும்போது அல்லது மருத்துவர் தாமதமானால் உருவகப்படுத்தப்பட்ட செய்தி அனுப்பப்படும். தொலைபேசி இல்லையா? மேசையில் உங்களைச் சேர்க்கலாம்.','आपको एक टोकन और आगे के मरीज़ व प्रतीक्षा सीमा दिखाने वाला पेज मिलेगा। SMS बॉक्स चुनने पर बारी पास आने या डॉक्टर के देर होने पर सिम्युलेटेड संदेश भेजा जाएगा। फ़ोन नहीं है? डेस्क आपको जोड़ सकता है।');
+L('Demo appointments','டெமோ முன்பதிவுகள்','डेमो अपॉइंटमेंट');
+L('Choose “Appointment” and use reference A-201, A-202 or A-203 with the matching doctor (Lakshmi, Venkat, Karthikeyan).','“முன்பதிவு” என்பதைத் தேர்ந்து, பொருந்தும் மருத்துவருடன் (லட்சுமி, வெங்கட், கார்த்திகேயன்) A-201, A-202 அல்லது A-203 எண்ணைப் பயன்படுத்துங்கள்.','“अपॉइंटमेंट” चुनें और संबंधित डॉक्टर (लक्ष्मी, वेंकट, कार्तिकेयन) के साथ संदर्भ A-201, A-202 या A-203 का उपयोग करें।');
+L('No booked appointment found for that reference with this doctor. Try A-201, A-202 or A-203.','இந்த மருத்துவருடன் அந்த எண்ணுக்கு முன்பதிவு எதுவும் இல்லை. A-201, A-202 அல்லது A-203 முயற்சிக்கவும்.','इस डॉक्टर के साथ उस संदर्भ की कोई बुकिंग नहीं मिली। A-201, A-202 या A-203 आज़माएँ।');
+/* token page */
+L('Checked in','பதிவு நேரம்','चेक-इन समय');
+L('You left the queue.','நீங்கள் வரிசையை விட்டு வெளியேறினீர்கள்.','आपने कतार छोड़ दी।');
+R(/Please see the desk to rejoin\.$/,'மீண்டும் சேர மேசையைப் பார்க்கவும்.','फिर से जुड़ने के लिए डेस्क पर जाएँ।');
+L('Token not found','டோக்கன் கிடைக்கவில்லை','टोकन नहीं मिला');
+L('This token is not active in this demo. Demo tokens reset when the page reloads.','இந்த டோக்கன் இந்த டெமோவில் செயலில் இல்லை. பக்கம் மீண்டும் ஏற்றப்படும்போது டெமோ டோக்கன்கள் மீட்டமையும்.','यह टोकन इस डेमो में सक्रिय नहीं है। पेज रीलोड होने पर डेमो टोकन रीसेट हो जाते हैं।');
+R(/^Walk-in, arrival order \((.+)\)$/,'நேரடி வருகை, வருகை வரிசை ($1)','वॉक-इन, आगमन क्रम ($1)');
+R(/^Arrival order \((.+)\)$/,'வருகை வரிசை ($1)','आगमन क्रम ($1)');
+R(/^Appointment (\S+), arrived (\S+)$/,'முன்பதிவு $1, வந்த நேரம் $2','अपॉइंटमेंट $1, पहुँचे $2');
+R(/^Late for (\S+) slot \(arrived (\S+)\), queued by arrival$/,'$1 நேரத்துக்குத் தாமதம் (வந்த நேரம் $2), வருகை வரிசைப்படி','$1 स्लॉट के लिए देर (पहुँचे $2), आगमन क्रम से कतार में');
+R(/^Priority set by staff: (.*)$/,'பணியாளர் நிர்ணயித்த முன்னுரிமை: $1','स्टाफ द्वारा तय प्राथमिकता: $1');
+R(/^Rule: \(patients ahead × (\d+) min average\) \+ (\d+) min delay = (\d+) min, shown as a range\. Estimates can change if the doctor is delayed\.$/,'விதி: (முன்னுள்ள நோயாளிகள் × $1 நிமிட சராசரி) + $2 நிமிட தாமதம் = $3 நிமிடம், வரம்பாகக் காட்டப்படும். மருத்துவர் தாமதமானால் மதிப்பீடுகள் மாறலாம்.','नियम: (आगे के मरीज़ × $1 मिनट औसत) + $2 मिनट देरी = $3 मिनट, सीमा के रूप में दिखाया गया। डॉक्टर के देर होने पर अनुमान बदल सकते हैं।');
+L('SMS alerts','SMS எச்சரிக்கைகள்','SMS अलर्ट');
+R(/^On\. We message (.+) when about (\d+) patients are ahead and when the doctor is late\.$/,'இயக்கத்தில். சுமார் $2 நோயாளிகள் முன்னால் இருக்கும்போதும் மருத்துவர் தாமதமானாலும் $1 எண்ணுக்குச் செய்தி அனுப்புவோம்.','चालू। जब लगभग $2 मरीज़ आगे हों और जब डॉक्टर देर से हों, हम $1 पर संदेश भेजेंगे।');
+L('Turn off alerts','எச்சரிக்கைகளை நிறுத்து','अलर्ट बंद करें');
+L('Off. Add a number to get a message when your turn is near.','நிறுத்தப்பட்டுள்ளது. உங்கள் முறை நெருங்கும்போது செய்தி பெற எண்ணைச் சேர்க்கவும்.','बंद। बारी पास आने पर संदेश पाने के लिए नंबर जोड़ें।');
+L('Turn on alerts','எச்சரிக்கைகளை இயக்கு','अलर्ट चालू करें');
+R(/^Only used for this visit\. Deleted after (\d+) days\. Simulated in this demo\.$/,'இந்த வருகைக்கு மட்டுமே பயன்படும். $1 நாட்களுக்குப் பிறகு நீக்கப்படும். இந்த டெமோவில் உருவகப்படுத்தப்பட்டது.','केवल इस विज़िट के लिए उपयोग। $1 दिन बाद हटा दिया जाएगा। इस डेमो में सिम्युलेटेड।');
+L('Messages sent (simulated)','அனுப்பிய செய்திகள் (உருவகப்படுத்தப்பட்டது)','भेजे गए संदेश (सिम्युलेटेड)');
+L("See the doctor's board",'மருத்துவரின் பலகையைப் பார்க்க','डॉक्टर का बोर्ड देखें');
+L('Leave queue','வரிசையை விடு','कतार छोड़ें');
+L('No smartphone or need help? The desk can look up your token. Priority is set only by authorised staff.','ஸ்மார்ட்போன் இல்லையா அல்லது உதவி தேவையா? மேசையில் உங்கள் டோக்கனைப் பார்க்கலாம். முன்னுரிமையை அங்கீகரிக்கப்பட்ட பணியாளர்கள் மட்டுமே நிர்ணயிப்பார்கள்.','स्मार्टफ़ोन नहीं है या मदद चाहिए? डेस्क आपका टोकन देख सकता है। प्राथमिकता केवल अधिकृत स्टाफ तय करते हैं।');
+/* how it works */
+L('How FlowBridge works','FlowBridge எவ்வாறு செயல்படுகிறது','FlowBridge कैसे काम करता है');
+L('One add-on layer next to the hospital system. Nothing is replaced.','மருத்துவமனை அமைப்புக்கு அருகில் ஒரு கூடுதல் அடுக்கு. எதுவும் மாற்றப்படவில்லை.','अस्पताल प्रणाली के बगल में एक ऐड-ऑन परत। कुछ भी बदला नहीं जाता।');
+L('Patient checks in','நோயாளி பதிவு செய்கிறார்','मरीज़ चेक-इन करता है');
+L('At the desk or on a phone: walk-in or appointment reference. Alerts are optional and need consent.','மேசையில் அல்லது தொலைபேசியில்: நேரடி வருகை அல்லது முன்பதிவு எண். எச்சரிக்கைகள் விருப்பமானவை, ஒப்புதல் தேவை.','डेस्क पर या फ़ोन पर: वॉक-इन या अपॉइंटमेंट संदर्भ। अलर्ट वैकल्पिक हैं और सहमति चाहिए।');
+L('Queue merges','வரிசை இணைகிறது','कतार मिलती है');
+L("Appointments and walk-ins share one fair queue with the hospital's own rule, shown to everyone.",'முன்பதிவுகளும் நேரடி வருகைகளும் மருத்துவமனையின் சொந்த விதியுடன் ஒரே நியாயமான வரிசையைப் பகிர்கின்றன; அது அனைவருக்கும் காட்டப்படும்.','अपॉइंटमेंट और वॉक-इन अस्पताल के अपने नियम के साथ एक निष्पक्ष कतार साझा करते हैं, जो सबको दिखता है।');
+L('Wait is estimated','காத்திருப்பு மதிப்பிடப்படுகிறது','प्रतीक्षा का अनुमान लगता है');
+L('Patients ahead × average service time + doctor delay, shown as a range. Rule-based first.','முன்னுள்ள நோயாளிகள் × சராசரி சேவை நேரம் + மருத்துவர் தாமதம், வரம்பாகக் காட்டப்படும். முதலில் விதி அடிப்படையிலானது.','आगे के मरीज़ × औसत सेवा समय + डॉक्टर की देरी, सीमा के रूप में दिखाया जाता है। पहले नियम-आधारित।');
+L('Staff stay in control','பணியாளர்கள் கட்டுப்பாட்டில்','स्टाफ नियंत्रण में रहता है');
+L('Call next, pause, mark late. Any priority override needs a reason and is logged.','அடுத்தவரை அழை, இடைநிறுத்து, தாமதம் குறி. எந்த முன்னுரிமை மாற்றத்துக்கும் காரணம் தேவை, அது பதிவு செய்யப்படும்.','अगला बुलाएँ, रोकें, देरी चिह्नित करें। किसी भी प्राथमिकता बदलाव का कारण चाहिए और वह दर्ज होता है।');
+L('Patient is kept informed','நோயாளிக்குத் தகவல் தரப்படுகிறது','मरीज़ को सूचित रखा जाता है');
+L('Token page updates and a simulated SMS goes out when the turn is near or the doctor is late.','டோக்கன் பக்கம் புதுப்பிக்கப்படும்; முறை நெருங்கும்போது அல்லது மருத்துவர் தாமதமானால் உருவகப்படுத்தப்பட்ட SMS செல்லும்.','टोकन पेज अपडेट होता है और बारी पास आने या डॉक्टर के देर होने पर सिम्युलेटेड SMS जाता है।');
+L('Hospital learns','மருத்துவமனை கற்றுக்கொள்கிறது','अस्पताल सीखता है');
+L('Median and 90th-percentile waits, no-show rate and estimate accuracy, to compare against a measured baseline.','இடைநிலை மற்றும் 90வது சதவீத காத்திருப்பு, வராதோர் விகிதம், மதிப்பீட்டு துல்லியம் ஆகியவை அளவிடப்பட்ட அடிப்படையுடன் ஒப்பிடப்படும்.','माध्यिका और 90वें प्रतिशतक की प्रतीक्षा, नो-शो दर और अनुमान की सटीकता, मापे गए आधार से तुलना के लिए।');
+L('Problems we are designing for','நாங்கள் தீர்க்க வடிவமைக்கும் சிக்கல்கள்','जिन समस्याओं के लिए हम डिज़ाइन कर रहे हैं');
+L('Crowded waiting halls','நெரிசலான காத்திருப்பு அரங்குகள்','भीड़ भरे प्रतीक्षा हॉल');
+L('Patients can wait outside the hall and come when their turn is near.','நோயாளிகள் அரங்குக்கு வெளியே காத்திருந்து முறை நெருங்கும்போது வரலாம்.','मरीज़ हॉल के बाहर इंतज़ार कर सकते हैं और बारी पास आने पर आ सकते हैं।');
+L('No idea how long','எவ்வளவு நேரம் என்று தெரியாது','कितना समय लगेगा पता नहीं');
+L('A range with a stated reason, and an alert if the doctor runs late.','காரணத்துடன் ஒரு வரம்பு, மருத்துவர் தாமதமானால் எச்சரிக்கை.','कारण के साथ एक सीमा, और डॉक्टर के देर होने पर अलर्ट।');
+L('Walk-in versus appointment fairness','நேரடி வருகை vs முன்பதிவு நியாயம்','वॉक-इन बनाम अपॉइंटमेंट निष्पक्षता');
+L('One visible rule and a grace window for late arrivals.','ஒரு தெரியும் விதி, தாமதமாக வருபவர்களுக்கு சலுகை நேரம்.','एक दिखने वाला नियम और देर से आने वालों के लिए छूट अवधि।');
+L('Privacy','தனியுரிமை','गोपनीयता');
+L('Tokens only on public screens, alerts only with consent, role-based access, audit log.','பொதுத் திரைகளில் டோக்கன்கள் மட்டும், ஒப்புதலுடன் மட்டுமே எச்சரிக்கை, பங்கு அடிப்படை அணுகல், தணிக்கைப் பதிவு.','सार्वजनिक स्क्रीन पर केवल टोकन, अलर्ट सिर्फ सहमति से, भूमिका-आधारित पहुँच, ऑडिट लॉग।');
+L('Integration risk','ஒருங்கிணைப்பு அபாயம்','इंटीग्रेशन जोखिम');
+L('Start with scheduled CSV or a mock API. Manual fallback if the feed fails.','திட்டமிட்ட CSV அல்லது மாதிரி API-யுடன் தொடங்கு. ஊட்டம் தோல்வியுற்றால் கைமுறை மாற்று.','निर्धारित CSV या मॉक API से शुरू करें। फ़ीड फेल हो तो मैन्युअल विकल्प।');
+L('The wait-time rule','காத்திருப்பு நேர விதி','प्रतीक्षा-समय का नियम');
+L('Wait = (patients ahead × average service time) + doctor delay. For example (3 × 8) + 4 = 28 min, shown as 25–35 min. We do not claim AI predictions until there is real data to train on.','காத்திருப்பு = (முன்னுள்ள நோயாளிகள் × சராசரி சேவை நேரம்) + மருத்துவர் தாமதம். எடுத்துக்காட்டு (3 × 8) + 4 = 28 நிமிடம், 25–35 நிமிடம் என்று காட்டப்படும். உண்மையான தரவு கிடைக்கும் வரை AI கணிப்புகள் என்று நாங்கள் கூறுவதில்லை.','प्रतीक्षा = (आगे के मरीज़ × औसत सेवा समय) + डॉक्टर की देरी। उदाहरण (3 × 8) + 4 = 28 मिनट, 25–35 मिनट के रूप में दिखाया जाता है। असली डेटा मिलने तक हम AI भविष्यवाणी का दावा नहीं करते।');
+/* staff page headings */
+L('Staff dashboard','பணியாளர் டாஷ்போர்டு','स्टाफ डैशबोर्ड');
+L('Reception view. Sign-in role is set in Demo controls.','வரவேற்பு பார்வை. உள்நுழைவு பங்கு டெமோ கட்டுப்பாடுகளில் அமைக்கப்படும்.','रिसेप्शन दृश्य। साइन-इन भूमिका डेमो कंट्रोल में सेट होती है।');
+L('Hospital-level view of waits and estimate accuracy. Demo data.','காத்திருப்பு மற்றும் மதிப்பீட்டு துல்லியத்தின் மருத்துவமனை அளவிலான பார்வை. டெமோ தரவு.','प्रतीक्षा और अनुमान की सटीकता का अस्पताल-स्तरीय दृश्य। डेमो डेटा।');
+L('Integration & settings','ஒருங்கிணைப்பு & அமைப்புகள்','इंटीग्रेशन और सेटिंग्स');
+L('Admin view: connector, queue rules, privacy and audit log.','நிர்வாகி பார்வை: இணைப்பி, வரிசை விதிகள், தனியுரிமை, தணிக்கைப் பதிவு.','एडमिन दृश्य: कनेक्टर, कतार नियम, गोपनीयता और ऑडिट लॉग।');
+L('Hospital staff only','மருத்துவமனை பணியாளர்கள் மட்டும்','केवल अस्पताल स्टाफ');
+L('Log out and log in as hospital staff to open this page.','வெளியேறி, மருத்துவமனை பணியாளராக உள்நுழைந்து இந்தப் பக்கத்தைத் திறக்கவும்.','लॉग आउट करें और इस पेज को खोलने के लिए अस्पताल स्टाफ के रूप में लॉग इन करें।');
+/* login */
+L('Log in or sign up','உள்நுழை அல்லது பதிவு செய்','लॉग इन या साइन अप करें');
+L('Patient','நோயாளி','मरीज़');
+L('Hospital staff','மருத்துவமனை பணியாளர்','अस्पताल स्टाफ');
+L('Role','பங்கு','भूमिका');
+L('Mobile number','கைபேசி எண்','मोबाइल नंबर');
+L('Continue','தொடர்க','जारी रखें');
+L('or','அல்லது','या');
+L('Continue as guest','விருந்தினராகத் தொடர்க','अतिथि के रूप में जारी रखें');
+L('Demo login. Use any 10-digit number; the code is 1234. By continuing you agree this is a prototype with synthetic data.','டெமோ உள்நுழைவு. எந்த 10 இலக்க எண்ணையும் பயன்படுத்தலாம்; குறியீடு 1234. தொடர்வதன் மூலம் இது செயற்கைத் தரவுடன் கூடிய முன்மாதிரி என்பதை ஒப்புக்கொள்கிறீர்கள்.','डेमो लॉगिन। कोई भी 10 अंकों का नंबर इस्तेमाल करें; कोड 1234 है। जारी रखकर आप मानते हैं कि यह कृत्रिम डेटा वाला प्रोटोटाइप है।');
+L('Verify your number','உங்கள் எண்ணைச் சரிபார்க்கவும்','अपना नंबर सत्यापित करें');
+R(/^Enter the 4-digit code sent to \+91 (.*)$/,'+91 $1 க்கு அனுப்பிய 4 இலக்கக் குறியீட்டை உள்ளிடவும்','+91 $1 पर भेजा गया 4 अंकों का कोड दर्ज करें');
+L('One-time password','ஒருமுறை கடவுச்சொல்','वन-टाइम पासवर्ड');
+L('Demo only: no SMS is sent. Use code','டெமோ மட்டும்: SMS அனுப்பப்படாது. குறியீடு','सिर्फ डेमो: कोई SMS नहीं भेजा जाता। कोड');
+L('Verify and continue','சரிபார்த்துத் தொடர்க','सत्यापित करें और जारी रखें');
+L('Change number','எண்ணை மாற்று','नंबर बदलें');
+L('Enter a 10-digit mobile number.','10 இலக்க கைபேசி எண்ணை உள்ளிடவும்.','10 अंकों का मोबाइल नंबर दर्ज करें।');
+L('That code is not right. Demo code is 1234.','அந்த குறியீடு சரியில்லை. டெமோ குறியீடு 1234.','यह कोड सही नहीं है। डेमो कोड 1234 है।');
+/* staff, analytics, integration, names, toasts, SMS */
+L('General Medicine','பொது மருத்துவம்','सामान्य चिकित्सा');
+L('Orthopaedics','எலும்பியல்','ऑर्थोपेडिक्स');
+L('Reception','வரவேற்பு','रिसेप्शन');
+L('Manager','மேலாளர்','मैनेजर');
+L('Admin','நிர்வாகி','एडमिन');
+L('Name','பெயர்','नाम');
+L('Mobile (optional)','கைபேசி (விருப்பம்)','मोबाइल (वैकल्पिक)');
+L('Walk-in','நேரடி வருகை','वॉक-इन');
+R(/^Signed in as (.+)\. Queue actions need the Reception role; you can set priority overrides\.$/,'$1 ஆக உள்நுழைந்துள்ளீர்கள். வரிசை செயல்களுக்கு வரவேற்புப் பங்கு தேவை; நீங்கள் முன்னுரிமை மாற்றங்களை அமைக்கலாம்.','आप $1 के रूप में साइन इन हैं। कतार कार्रवाइयों के लिए रिसेप्शन भूमिका चाहिए; आप प्राथमिकता बदलाव सेट कर सकते हैं।');
+R(/^Signed in as (.+)\. Queue actions need the Reception role\.$/,'$1 ஆக உள்நுழைந்துள்ளீர்கள். வரிசை செயல்களுக்கு வரவேற்புப் பங்கு தேவை.','आप $1 के रूप में साइन इन हैं। कतार कार्रवाइयों के लिए रिसेप्शन भूमिका चाहिए।');
+R(/^Data last updated at (\S+)\. The last import failed, so staff can add tokens by hand\. Fix the file under Integration & settings\.$/,'தரவு கடைசியாக $1 மணிக்குப் புதுப்பிக்கப்பட்டது. கடைசி இறக்குமதி தோல்வியுற்றது, எனவே பணியாளர்கள் கையால் டோக்கன் சேர்க்கலாம். ஒருங்கிணைப்பு & அமைப்புகளில் கோப்பைச் சரிசெய்யவும்.','डेटा आखिरी बार $1 पर अपडेट हुआ। पिछला इम्पोर्ट विफल रहा, इसलिए स्टाफ हाथ से टोकन जोड़ सकते हैं। इंटीग्रेशन और सेटिंग्स में फ़ाइल ठीक करें।');
+L('Add patient at the desk','மேசையில் நோயாளியைச் சேர்க்க','डेस्क पर मरीज़ जोड़ें');
+L('For patients without a smartphone. Same queue rules apply.','ஸ்மார்ட்போன் இல்லாத நோயாளிகளுக்கு. அதே வரிசை விதிகள் பொருந்தும்.','बिना स्मार्टफ़ोन वाले मरीज़ों के लिए। वही कतार नियम लागू होते हैं।');
+L('Patient agreed to SMS alerts','நோயாளி SMS எச்சரிக்கைகளுக்கு ஒப்புக்கொண்டார்','मरीज़ SMS अलर्ट के लिए सहमत है');
+L('Create token','டோக்கன் உருவாக்கு','टोकन बनाएँ');
+R(/^Expected today \((\d+)\)$/,'இன்று எதிர்பார்க்கப்படுவோர் ($1)','आज अपेक्षित ($1)');
+L('Booked, not yet arrived.','முன்பதிவு செய்தவர்கள், இன்னும் வரவில்லை.','बुक किए गए, अभी पहुँचे नहीं।');
+L('Ref','எண்','संदर्भ');
+L('Mark arrived','வந்ததாகக் குறி','पहुँचा चिह्नित करें');
+L('Everyone expected has arrived.','எதிர்பார்க்கப்பட்ட அனைவரும் வந்துவிட்டனர்.','अपेक्षित सभी लोग पहुँच चुके हैं।');
+L('Paused','இடைநிறுத்தம்','रुका हुआ');
+L('Serving','பார்க்கிறார்','देख रहे हैं');
+L('Ready for next','அடுத்தவருக்குத் தயார்','अगले के लिए तैयार');
+R(/^Late \+(\d+) min$/,'தாமதம் +$1 நிமிடம்','देरी +$1 मिनट');
+R(/^avg service (\d+) min$/,'சராசரி சேவை $1 நிமிடம்','औसत सेवा $1 मिनट');
+R(/^started (\S+)$/,'தொடக்கம் $1','शुरू $1');
+R(/^called (\d+)×$/,'$1× அழைக்கப்பட்டது','$1× बुलाया');
+L('Nobody in the room.','அறையில் யாரும் இல்லை.','कमरे में कोई नहीं।');
+L('Call next','அடுத்தவரை அழை','अगला बुलाएँ');
+L('Call again','மீண்டும் அழை','फिर बुलाएँ');
+L('No-show','வரவில்லை','नो-शो');
+L('Doctor paused','மருத்துவர் இடைநிறுத்தம்','डॉक्टर रुके');
+L('Resume','தொடர்','फिर शुरू');
+L('+15 min late','+15 நிமிடம் தாமதம்','+15 मिनट देरी');
+L('Back on time','நேரத்துக்கு வந்தார்','समय पर वापस');
+R(/^Waiting \((\d+)\)$/,'காத்திருப்பு ($1)','प्रतीक्षा में ($1)');
+L('Queue is empty.','வரிசை காலியாக உள்ளது.','कतार खाली है।');
+R(/^Appt (\S+)$/,'முன்பதிவு $1','अपॉइंटमेंट $1');
+L('Remove priority','முன்னுரிமையை நீக்கு','प्राथमिकता हटाएँ');
+L('Priority…','முன்னுரிமை…','प्राथमिकता…');
+L('No-shows','வராதவர்கள்','नो-शो');
+L('Re-insert','மீண்டும் சேர்','फिर जोड़ें');
+L('Reason (required)','காரணம் (கட்டாயம்)','कारण (आवश्यक)');
+L('Choose a reason','காரணத்தைத் தேர்ந்தெடுக்கவும்','कारण चुनें');
+L('Emergency (clinician decision)','அவசரம் (மருத்துவர் முடிவு)','आपातकाल (चिकित्सक का निर्णय)');
+L('Elderly or frail','முதியவர் அல்லது பலவீனமானவர்','बुज़ुर्ग या कमज़ोर');
+L('Pregnant','கர்ப்பிணி','गर्भवती');
+L('Differently-abled','மாற்றுத்திறனாளி','दिव्यांग');
+L('Other (add a note)','மற்றவை (குறிப்பு சேர்க்கவும்)','अन्य (नोट जोड़ें)');
+L('Note','குறிப்பு','नोट');
+L('Move to front','முன்னே நகர்த்து','आगे करें');
+L('Cancel','ரத்து செய்','रद्द करें');
+L('Wait estimate was wrong','காத்திருப்பு மதிப்பீடு தவறாக இருந்தது','प्रतीक्षा अनुमान गलत था');
+L('Doctor was not in the room','மருத்துவர் அறையில் இல்லை','डॉक्टर कमरे में नहीं थे');
+L('Order of tokens looks unfair','டோக்கன் வரிசை நியாயமற்றதாகத் தெரிகிறது','टोकन का क्रम अनुचित लगता है');
+L('Other','மற்றவை','अन्य');
+/* analytics */
+L('Median wait','இடைநிலை காத்திருப்பு','माध्यिका प्रतीक्षा');
+L('90th percentile wait','90வது சதவீத காத்திருப்பு','90वें प्रतिशतक की प्रतीक्षा');
+L('Wait-time error','காத்திருப்பு நேரப் பிழை','प्रतीक्षा-समय त्रुटि');
+L('No-show rate','வராதோர் விகிதம்','नो-शो दर');
+L('Patients served','சேவை பெற்ற நோயாளிகள்','सेवा पाए मरीज़');
+L('In queue now','இப்போது வரிசையில்','अभी कतार में');
+L('Alerts sent','அனுப்பிய எச்சரிக்கைகள்','भेजे गए अलर्ट');
+L('Priority overrides','முன்னுரிமை மாற்றங்கள்','प्राथमिकता बदलाव');
+L('check-in to called','பதிவு முதல் அழைப்பு வரை','चेक-इन से बुलाए जाने तक');
+L('worst-case view','மோசமான நிலை பார்வை','सबसे खराब स्थिति का दृश्य');
+L('median |actual − predicted|','இடைநிலை |உண்மை − கணிப்பு|','माध्यिका |वास्तविक − अनुमानित|');
+R(/^(\d+) of called patients$/,'அழைக்கப்பட்டவர்களில் $1','बुलाए गए मरीज़ों में से $1');
+L('completed today','இன்று முடிந்தவை','आज पूरे हुए');
+L('waiting for a doctor','மருத்துவருக்காகக் காத்திருப்பு','डॉक्टर की प्रतीक्षा में');
+L('simulated SMS','உருவகப்படுத்தப்பட்ட SMS','सिम्युलेटेड SMS');
+L('each one logged with a reason','ஒவ்வொன்றும் காரணத்துடன் பதிவு','हर एक कारण सहित दर्ज');
+L('Baseline vs pilot','அடிப்படை vs பைலட்','बेसलाइन बनाम पायलट');
+L("Enter the hospital's measured baseline. The 45 min shown is an example only.",'மருத்துவமனையின் அளவிடப்பட்ட அடிப்படையை உள்ளிடவும். காட்டப்பட்ட 45 நிமிடம் எடுத்துக்காட்டு மட்டுமே.','अस्पताल की मापी गई बेसलाइन दर्ज करें। दिखाए गए 45 मिनट केवल उदाहरण हैं।');
+L('Baseline median wait (min)','அடிப்படை இடைநிலை காத்திருப்பு (நிமிடம்)','बेसलाइन माध्यिका प्रतीक्षा (मिनट)');
+L('No completed visits yet.','இன்னும் முடிந்த வருகைகள் இல்லை.','अभी कोई पूर्ण विज़िट नहीं।');
+R(/^Pilot median is ([\d.]+) min, ([\d.]+) min below the baseline\.$/,'பைலட் இடைநிலை $1 நிமிடம், அடிப்படையை விட $2 நிமிடம் குறைவு.','पायलट माध्यिका $1 मिनट है, बेसलाइन से $2 मिनट कम।');
+R(/^Pilot median is ([\d.]+) min, ([\d.]+) min above the baseline\.$/,'பைலட் இடைநிலை $1 நிமிடம், அடிப்படையை விட $2 நிமிடம் அதிகம்.','पायलट माध्यिका $1 मिनट है, बेसलाइन से $2 मिनट अधिक।');
+L('Day start','நாள் தொடக்கம்','दिन की शुरुआत');
+L('System','அமைப்பு','सिस्टम');
+L('Synthetic OPD loaded: 3 doctors, 20 patients','செயற்கை OPD ஏற்றப்பட்டது: 3 மருத்துவர்கள், 20 நோயாளிகள்','कृत्रिम OPD लोड हुआ: 3 डॉक्टर, 20 मरीज़');
+L('Studies show shorter registration waits, not a proven cut in total wait; the pilot has to measure it.','ஆய்வுகள் குறுகிய பதிவு காத்திருப்பைக் காட்டுகின்றன, மொத்த காத்திருப்பில் நிரூபிக்கப்பட்ட குறைவு அல்ல; பைலட் அதை அளவிட வேண்டும்.','अध्ययन पंजीकरण की कम प्रतीक्षा दिखाते हैं, कुल प्रतीक्षा में सिद्ध कमी नहीं; पायलट को इसे मापना होगा।');
+L('Waiting now, by doctor','இப்போது காத்திருப்பு, மருத்துவர் வாரியாக','अभी प्रतीक्षा, डॉक्टर के अनुसार');
+L('Wait distribution (completed visits)','காத்திருப்பு பரவல் (முடிந்த வருகைகள்)','प्रतीक्षा वितरण (पूर्ण विज़िट)');
+L('How these are counted','இவை எப்படி கணக்கிடப்படுகின்றன','इनकी गणना कैसे होती है');
+L('Wait','காத்திருப்பு','प्रतीक्षा');
+L('called time − check-in time','அழைத்த நேரம் − பதிவு நேரம்','बुलाने का समय − चेक-इन समय');
+L('|actual wait − wait predicted at check-in|','|உண்மை காத்திருப்பு − பதிவின் போது கணித்த காத்திருப்பு|','|वास्तविक प्रतीक्षा − चेक-इन पर अनुमानित प्रतीक्षा|');
+L('no-shows ÷ patients called','வராதோர் ÷ அழைக்கப்பட்ட நோயாளிகள்','नो-शो ÷ बुलाए गए मरीज़');
+L('Report','அறிக்கை','रिपोर्ट');
+L('median and 90th percentile, never only averages','இடைநிலை மற்றும் 90வது சதவீதம், சராசரி மட்டும் அல்ல','माध्यिका और 90वाँ प्रतिशतक, केवल औसत नहीं');
+/* integration and settings */
+L('HIMS connector','HIMS இணைப்பி','HIMS कनेक्टर');
+L('FlowBridge sits next to the hospital system. Start with a scheduled CSV or a mock API; go live only after the hospital approves.','FlowBridge மருத்துவமனை அமைப்புக்கு அருகில் இயங்குகிறது. திட்டமிட்ட CSV அல்லது மாதிரி API-யுடன் தொடங்குங்கள்; மருத்துவமனை அனுமதித்த பிறகே நேரடியாக இயக்குங்கள்.','FlowBridge अस्पताल प्रणाली के बगल में चलता है। निर्धारित CSV या मॉक API से शुरू करें; अस्पताल की मंज़ूरी के बाद ही लाइव जाएँ।');
+L('Mode','முறை','मोड');
+L('Scheduled CSV import','திட்டமிட்ட CSV இறக்குமதி','निर्धारित CSV इम्पोर्ट');
+L('Mock API (simulated)','மாதிரி API (உருவகப்படுத்தப்பட்டது)','मॉक API (सिम्युलेटेड)');
+L('Status','நிலை','स्थिति');
+L('Import failed','இறக்குமதி தோல்வி','इम्पोर्ट विफल');
+L('OK','சரி','ठीक');
+R(/^last updated (\S+)$/,'கடைசி புதுப்பிப்பு $1','आखिरी अपडेट $1');
+L('Sync now','இப்போது ஒத்திசை','अभी सिंक करें');
+L('Clear simulated failure','உருவகப்படுத்தப்பட்ட தோல்வியை நீக்கு','सिम्युलेटेड विफलता हटाएँ');
+L('Simulate import failure','இறக்குமதி தோல்வியை உருவகப்படுத்து','इम्पोर्ट विफलता सिम्युलेट करें');
+L('Paste appointments (ref, patient, doctor, time)','முன்பதிவுகளை ஒட்டவும் (எண், நோயாளி, மருத்துவர், நேரம்)','अपॉइंटमेंट पेस्ट करें (संदर्भ, मरीज़, डॉक्टर, समय)');
+L('Import','இறக்குமதி','इम्पोर्ट');
+L('Load sample','மாதிரியை ஏற்று','नमूना लोड करें');
+R(/^(\d+) appointment\(s\) imported\.$/,'$1 முன்பதிவு(கள்) இறக்குமதி செய்யப்பட்டன.','$1 अपॉइंटमेंट इम्पोर्ट हुए।');
+R(/^(\d+) appointment\(s\) imported; line\(s\) (.+) skipped \(expected: ref, patient, exact doctor name, HH:MM\)\.$/,'$1 முன்பதிவு(கள்) இறக்குமதி செய்யப்பட்டன; வரி(கள்) $2 தவிர்க்கப்பட்டன (எதிர்பார்ப்பு: எண், நோயாளி, சரியான மருத்துவர் பெயர், HH:MM).','$1 अपॉइंटमेंट इम्पोर्ट हुए; पंक्ति(याँ) $2 छोड़ी गईं (अपेक्षित: संदर्भ, मरीज़, सटीक डॉक्टर नाम, HH:MM)।');
+L('Switch the role to Admin (top right) to change this.','இதை மாற்ற பங்கை நிர்வாகிக்கு மாற்றவும் (மேல் வலது).','इसे बदलने के लिए भूमिका एडमिन करें (ऊपर दाएँ)।');
+L('Queue rules (set by the hospital)','வரிசை விதிகள் (மருத்துவமனை நிர்ணயிப்பது)','कतार नियम (अस्पताल द्वारा तय)');
+L('Order rule','வரிசை விதி','क्रम नियम');
+L('Appointment slot time, then walk-ins by arrival','முன்பதிவு நேரம், பிறகு நேரடி வருகையாளர்கள் வருகைப்படி','अपॉइंटमेंट स्लॉट समय, फिर वॉक-इन आगमन के क्रम में');
+L('Strict arrival order','கண்டிப்பான வருகை வரிசை','सख्त आगमन क्रम');
+L('Grace window (min)','சலுகை நேரம் (நிமிடம்)','छूट अवधि (मिनट)');
+L('Default service time (min)','இயல்பு சேவை நேரம் (நிமிடம்)','डिफ़ॉल्ट सेवा समय (मिनट)');
+L('SMS when patients ahead ≤','முன்னுள்ள நோயாளிகள் ≤ ஆனால் SMS','आगे के मरीज़ ≤ होने पर SMS');
+L('A late appointment patient (past the grace window) is queued by arrival. Priority overrides always need a reason and are logged. The system never triages.','தாமதமாக வரும் முன்பதிவு நோயாளி (சலுகை நேரத்தைத் தாண்டியவர்) வருகைப்படி வரிசையில் சேர்க்கப்படுவார். முன்னுரிமை மாற்றங்களுக்கு எப்போதும் காரணம் தேவை, அவை பதிவு செய்யப்படும். அமைப்பு ஒருபோதும் தரம் பிரிக்காது.','देर से आने वाला अपॉइंटमेंट मरीज़ (छूट अवधि के बाद) आगमन के क्रम से कतार में जाता है। प्राथमिकता बदलाव के लिए हमेशा कारण चाहिए और वे दर्ज होते हैं। प्रणाली कभी ट्राइएज नहीं करती।');
+L('Privacy (DPDP Act 2023)','தனியுரிமை (DPDP சட்டம் 2023)','गोपनीयता (DPDP अधिनियम 2023)');
+L('Shared fields','பகிரப்படும் புலங்கள்','साझा किए गए फ़ील्ड');
+L('token, department, appointment, status, timestamps','டோக்கன், துறை, முன்பதிவு, நிலை, நேரமுத்திரைகள்','टोकन, विभाग, अपॉइंटमेंट, स्थिति, टाइमस्टैम्प');
+L('Never shared','ஒருபோதும் பகிரப்படாதவை','कभी साझा नहीं');
+L('medical records, diagnoses','மருத்துவப் பதிவுகள், நோய் கண்டறிதல்கள்','मेडिकल रिकॉर्ड, निदान');
+L('Public screens','பொதுத் திரைகள்','सार्वजनिक स्क्रीन');
+L('token only, no names','டோக்கன் மட்டும், பெயர்கள் இல்லை','केवल टोकन, कोई नाम नहीं');
+L('Alerts','எச்சரிக்கைகள்','अलर्ट');
+L('only with consent, shown as opt-in at check-in','ஒப்புதலுடன் மட்டும், பதிவின் போது விருப்பத் தேர்வாகக் காட்டப்படும்','केवल सहमति से, चेक-इन पर ऑप्ट-इन के रूप में दिखाया जाता है');
+L('Access','அணுகல்','पहुँच');
+L('by role, every action logged','பங்கு அடிப்படையில், ஒவ்வொரு செயலும் பதிவு','भूमिका के अनुसार, हर कार्रवाई दर्ज');
+L('Retention for phone numbers and visit data (days)','தொலைபேசி எண்கள் மற்றும் வருகைத் தரவு சேமிப்பு (நாட்கள்)','फ़ोन नंबर और विज़िट डेटा का प्रतिधारण (दिन)');
+R(/^Simulated SMS \/ WhatsApp outbox \((\d+)\)$/,'உருவகப்படுத்தப்பட்ட SMS / WhatsApp வெளிச்செல்லும் பெட்டி ($1)','सिम्युलेटेड SMS / WhatsApp आउटबॉक्स ($1)');
+L('Nothing sent yet. Check in with an SMS number, or press +15 min late for a doctor.','இன்னும் எதுவும் அனுப்பப்படவில்லை. SMS எண்ணுடன் பதிவு செய்யுங்கள் அல்லது ஒரு மருத்துவருக்கு +15 நிமிடம் தாமதம் அழுத்துங்கள்.','अभी कुछ नहीं भेजा गया। SMS नंबर के साथ चेक-इन करें, या किसी डॉक्टर के लिए +15 मिनट देरी दबाएँ।');
+L('Audit log','தணிக்கைப் பதிவு','ऑडिट लॉग');
+L('Time','நேரம்','समय');
+L('Who','யார்','कौन');
+L('Action','செயல்','कार्रवाई');
+L('Detail','விவரம்','विवरण');
+L('simulated','உருவகப்படுத்தப்பட்டது','सिम्युलेटेड');
+L('Turn approaching','முறை நெருங்குகிறது','बारी पास आ रही है');
+L('Delay alert','தாமத எச்சரிக்கை','देरी अलर्ट');
+R(/^to (\+91 .*|\(no number\))$/,'பெறுநர் $1','प्राप्तकर्ता $1');
+R(/^FlowBridge: your turn is approaching \(token (.+?), (.+?), (.+?)\)\. About (\d+)-(\d+) min\. Please stay nearby\.$/,'FlowBridge: உங்கள் முறை நெருங்குகிறது (டோக்கன் $1, $2, $3). சுமார் $4-$5 நிமிடம். தயவுசெய்து அருகிலேயே இருங்கள்.','FlowBridge: आपकी बारी पास आ रही है (टोकन $1, $2, $3)। लगभग $4-$5 मिनट। कृपया पास में रहें।');
+R(/^FlowBridge: (.+?) is away for a short while\. New estimate for (.+?): (\d+)-(\d+) min\.$/,'FlowBridge: $1 சிறிது நேரம் இல்லை. $2 க்கான புதிய மதிப்பீடு: $3-$4 நிமிடம்.','FlowBridge: $1 कुछ देर के लिए बाहर हैं। $2 के लिए नया अनुमान: $3-$4 मिनट।');
+R(/^FlowBridge: (.+?) is running about (\d+) min late\. New estimate for (.+?): (\d+)-(\d+) min\.$/,'FlowBridge: $1 சுமார் $2 நிமிடம் தாமதமாகிறார். $3 க்கான புதிய மதிப்பீடு: $4-$5 நிமிடம்.','FlowBridge: $1 लगभग $2 मिनट देर से चल रहे हैं। $3 के लिए नया अनुमान: $4-$5 मिनट।');
+/* toasts */
+R(/^Token (\S+) issued$/,'டோக்கன் $1 வழங்கப்பட்டது','टोकन $1 जारी हुआ');
+R(/^Token (\S+) created$/,'டோக்கன் $1 உருவாக்கப்பட்டது','टोकन $1 बनाया गया');
+R(/^Welcome(?:, (.+))?$/,'வரவேற்கிறோம் $1','स्वागत है $1');
+R(/^Booked\. Your reference is (\S+)$/,'முன்பதிவு ஆனது. உங்கள் எண் $1','बुक हो गया। आपका संदर्भ $1 है');
+R(/^Checked in\. Token (\S+)$/,'பதிவு ஆனது. டோக்கன் $1','चेक-इन हो गया। टोकन $1');
+L('Demo reset to 10:00 with 20 synthetic patients','டெமோ 10:00 க்கு 20 செயற்கை நோயாளிகளுடன் மீட்டமைக்கப்பட்டது','डेमो 10:00 पर 20 कृत्रिम मरीज़ों के साथ रीसेट हुआ');
+L('Thanks, report saved in the demo log','நன்றி, புகார் டெமோ பதிவில் சேமிக்கப்பட்டது','धन्यवाद, रिपोर्ट डेमो लॉग में सहेजी गई');
+L('You have left the queue','நீங்கள் வரிசையை விட்டு வெளியேறினீர்கள்','आपने कतार छोड़ दी');
+L('SMS alerts on (simulated)','SMS எச்சரிக்கைகள் இயக்கம் (உருவகப்படுத்தப்பட்டது)','SMS अलर्ट चालू (सिम्युलेटेड)');
+L('Enter a 10-digit mobile number','10 இலக்க கைபேசி எண்ணை உள்ளிடவும்','10 अंकों का मोबाइल नंबर दर्ज करें');
+R(/^Called (\S+)$/,'$1 அழைக்கப்பட்டார்','$1 को बुलाया गया');
+R(/^(\S+) marked no-show$/,'$1 வரவில்லை எனக் குறிக்கப்பட்டது','$1 नो-शो चिह्नित');
+L('Choose a reason first','முதலில் காரணத்தைத் தேர்ந்தெடுக்கவும்','पहले कारण चुनें');
+L('Add a note for "Other"','“மற்றவை” க்கு குறிப்பு சேர்க்கவும்','“अन्य” के लिए नोट जोड़ें');
+R(/^(\S+) moved to front$/,'$1 முன்னே நகர்த்தப்பட்டது','$1 को आगे किया गया');
+L('Sync complete','ஒத்திசைவு முடிந்தது','सिंक पूरा हुआ');
+R(/^Sync failed\. Data last updated (\S+)$/,'ஒத்திசைவு தோல்வி. தரவு கடைசியாக $1 க்குப் புதுப்பிக்கப்பட்டது','सिंक विफल। डेटा आखिरी बार $1 पर अपडेट हुआ');
+/* reschedule and cancel */
+L('Change time','நேரத்தை மாற்று','समय बदलें');
+L('New time','புதிய நேரம்','नया समय');
+L('Save new time','புதிய நேரத்தைச் சேமி','नया समय सहेजें');
+L('Keep current time','தற்போதைய நேரத்தை வைத்திரு','मौजूदा समय रखें');
+R(/^Change appointment (\S+)$/,'முன்பதிவு $1 ஐ மாற்று','अपॉइंटमेंट $1 बदलें');
+L('Pick a new time or doctor. The reference stays the same.','புதிய நேரம் அல்லது மருத்துவரைத் தேர்ந்தெடுக்கவும். முன்பதிவு எண் அப்படியே இருக்கும்.','नया समय या डॉक्टर चुनें। संदर्भ वही रहता है।');
+R(/^Cancel appointment (\S+)\?$/,'முன்பதிவு $1 ஐ ரத்து செய்யவா?','अपॉइंटमेंट $1 रद्द करें?');
+L("It will be removed from today's list.",'இது இன்றைய பட்டியலிலிருந்து நீக்கப்படும்.','यह आज की सूची से हटा दिया जाएगा।');
+L('Yes, cancel appointment','ஆம், முன்பதிவை ரத்து செய்','हाँ, अपॉइंटमेंट रद्द करें');
+L('Keep appointment','முன்பதிவை வைத்திரு','अपॉइंटमेंट रखें');
+L('Cancel','ரத்து செய்','रद्द करें');
+R(/^Cancelled \((\d+)\)$/,'ரத்து செய்யப்பட்டவை ($1)','रद्द किए गए ($1)');
+L('Restore','மீட்டெடு','बहाल करें');
+L('Choose a time first','முதலில் நேரத்தைத் தேர்ந்தெடுக்கவும்','पहले समय चुनें');
+L('No change made','மாற்றம் எதுவும் செய்யப்படவில்லை','कोई बदलाव नहीं किया गया');
+R(/^Appointment (\S+) moved to (\S+)$/,'முன்பதிவு $1 $2 க்கு மாற்றப்பட்டது','अपॉइंटमेंट $1 को $2 पर किया गया');
+R(/^Appointment (\S+) cancelled$/,'முன்பதிவு $1 ரத்து செய்யப்பட்டது','अपॉइंटमेंट $1 रद्द किया गया');
+R(/^Appointment (\S+) restored$/,'முன்பதிவு $1 மீட்டெடுக்கப்பட்டது','अपॉइंटमेंट $1 बहाल किया गया');
+L('Appointment changed','முன்பதிவு மாற்றம்','अपॉइंटमेंट बदला');
+L('Appointment cancelled','முன்பதிவு ரத்து','अपॉइंटमेंट रद्द');
+R(/^FlowBridge: your appointment (\S+) has moved to (\S+) with (.+?), Room (\d+)\.$/,'FlowBridge: உங்கள் முன்பதிவு $1 $2 க்கு $3 உடன் மாற்றப்பட்டது, அறை $4.','FlowBridge: आपका अपॉइंटमेंट $1 अब $2 पर $3 के साथ है, कक्ष $4।');
+R(/^FlowBridge: your appointment (\S+) has been cancelled\. Please contact the desk to rebook\.$/,'FlowBridge: உங்கள் முன்பதிவு $1 ரத்து செய்யப்பட்டது. மீண்டும் பதிவு செய்ய மேசையைத் தொடர்பு கொள்ளவும்.','FlowBridge: आपका अपॉइंटमेंट $1 रद्द कर दिया गया है। दोबारा बुक करने के लिए डेस्क से संपर्क करें।');
+L('Send me SMS alerts about this appointment (changes and when my turn is near)','இந்த முன்பதிவு பற்றிய SMS எச்சரிக்கைகளை அனுப்புங்கள் (மாற்றங்கள் மற்றும் என் முறை நெருங்கும்போது)','इस अपॉइंटमेंट के बारे में मुझे SMS अलर्ट भेजें (बदलाव और बारी पास आने पर)');
+L('Add a mobile number to get SMS alerts','SMS எச்சரிக்கைகள் பெற கைபேசி எண்ணைச் சேர்க்கவும்','SMS अलर्ट पाने के लिए मोबाइल नंबर जोड़ें');
+L('Doctor delayed? Shift upcoming appointments','மருத்துவர் தாமதமா? வரவிருக்கும் முன்பதிவுகளை நகர்த்துங்கள்','डॉक्टर देर से? आगामी अपॉइंटमेंट आगे करें');
+L('Shift by','இவ்வளவு நகர்த்து','इतना आगे करें');
+L('Shift appointments','முன்பதிவுகளை நகர்த்து','अपॉइंटमेंट आगे करें');
+L('Moves every booked, not-yet-arrived appointment for that doctor later, and sends a simulated SMS to patients who agreed to alerts.','அந்த மருத்துவருக்கான வராத அனைத்து முன்பதிவுகளையும் பின்னே நகர்த்தி, எச்சரிக்கைக்கு ஒப்புக்கொண்ட நோயாளிகளுக்கு உருவகப்படுத்தப்பட்ட SMS அனுப்பும்.','उस डॉक्टर के सभी बुक किए, अभी न पहुँचे अपॉइंटमेंट को आगे करता है और अलर्ट के लिए सहमत मरीज़ों को सिम्युलेटेड SMS भेजता है।');
+L('No upcoming appointments for this doctor','இந்த மருத்துவருக்கு வரவிருக்கும் முன்பதிவுகள் இல்லை','इस डॉक्टर के लिए कोई आगामी अपॉइंटमेंट नहीं');
+R(/^Shifted (\d+) appointment\(s\) by (\d+) min$/,'$1 முன்பதிவு(கள்) $2 நிமிடம் நகர்த்தப்பட்டன','$1 अपॉइंटमेंट $2 मिनट आगे किए गए');
+R(/^FlowBridge: your appointment (\S+) with (.+?) is delayed by (\d+) min\. New time: (\S+)\.$/,'FlowBridge: $2 உடனான உங்கள் முன்பதிவு $1 $3 நிமிடம் தாமதம். புதிய நேரம்: $4.','FlowBridge: $2 के साथ आपका अपॉइंटमेंट $1 $3 मिनट देर से है। नया समय: $4।');
+/* names */
+var NM=[['Dr. R. Lakshmi','டாக்டர் ஆர். லட்சுமி','डॉ. आर. लक्ष्मी'],['Dr. S. Venkat','டாக்டர் எஸ். வெங்கட்','डॉ. एस. वेंकट'],['Dr. M. Karthikeyan','டாக்டர் எம். கார்த்திகேயன்','डॉ. एम. कार्तिकेयन'],['R. Lakshmi','ஆர். லட்சுமி','आर. लक्ष्मी'],['S. Venkat','எஸ். வெங்கட்','एस. वेंकट'],['M. Karthikeyan','எம். கார்த்திகேயன்','एम. कार्तिकेयन']];
+function nm(s,i){NM.forEach(function(n){if(s.indexOf(n[0])>=0)s=s.split(n[0]).join(n[i+1])});return s}
+function tx1(s,i){
+  var h=X[s];if(h)return h[i];
+  for(var k=0;k<P.length;k++){if(P[k][0].test(s))return s.replace(P[k][0],P[k][i+1])}
+  return s}
+function tx(s){
+  var i=S.lang==='ta'?0:1,r=tx1(s,i);
+  if(r===s&&s.indexOf(' · ')>=0){r=s.split(' · ').map(function(p){return tx1(p,i)}).join(' · ')}
+  return nm(r,i)}
+function applyLang(){
+  var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null),n,list=[];
+  while((n=w.nextNode()))list.push(n);
+  list.forEach(function(n){
+    var p=n.parentNode;if(!p)return;var tg=p.nodeName;
+    if(tg==='SCRIPT'||tg==='STYLE'||tg==='TEXTAREA')return;
+    if(tg==='OPTION'&&!p.hasAttribute('value'))return;
+    if(p.closest&&p.closest('#toast'))return;
+    var o=ORIG.get(n);if(o===undefined){o=n.nodeValue;ORIG.set(n,o)}
+    var m=/^(\s*)([\s\S]*?)(\s*)$/.exec(o);if(!m[2])return;
+    var out=S.lang==='en'?o:m[1]+tx(m[2])+m[3];
+    if(n.nodeValue!==out)n.nodeValue=out})}
+
+/* Back navigation: in-app history stack, with a fixed parent page as fallback */
+var PARENT={hospital:'home',how:'home',appointments:'hospital',checkin:'hospital',doctor:'hospital',queue:'hospital',staff:'home',analytics:'staff',settings:'staff'};
+var NAV=[location.hash];
+window.addEventListener('hashchange',function(){var h=location.hash;if(NAV.length>1&&NAV[NAV.length-2]===h)NAV.pop();else if(NAV[NAV.length-1]!==h)NAV.push(h)});
+function goBack(parent){if(NAV.length>1){history.back()}else{location.hash=(parent&&parent!=='home')?'#/'+parent:'#/'}}
+function render(skipSave){
+  if(skipSave!==true)saveForm();
+  var v=$('#view'),act=document.activeElement&&document.activeElement.id,pos=window.scrollY,r=parseRoute(),h;
+  var staffOnly={staff:1,analytics:1,settings:1};
+  if(staffOnly[r.name]&&S.user&&S.user.type!=='staff'){r={name:'blocked',arg:''}}
+  switch(r.name){
+    case 'blocked':h=vMissing('Hospital staff only','Log out and log in as hospital staff to open this page.');break;
+    case 'hospital':h=vHospital();break;
+    case 'checkin':h=vCheckin(r.arg);break;
+    case 'appointments':h=vAppointments();break;
+    case 'how':h=vHow();break;
+    case 'doctor':h=vDoctor(r.arg);break;
+    case 'queue':h=vQueue(r.arg);break;
+    case 'staff':h=wrapStaff('Staff dashboard','Reception view. Sign-in role is set in Demo controls.',viewStaff());break;
+    case 'analytics':h=wrapStaff('Analytics','Hospital-level view of waits and estimate accuracy. Demo data.',viewAnalytics());break;
+    case 'settings':h=wrapStaff('Integration &amp; settings','Admin view: connector, queue rules, privacy and audit log.',viewAdmin());break;
+    default:h=vHome()}
+  if(PARENT[r.name]&&h.indexOf('class="back"')<0&&h.indexOf('data-act="back"')<0)h='<button type="button" class="back" data-act="back" data-parent="'+PARENT[r.name]+'">&larr; Back</button>'+h;
+  v.innerHTML=h;restoreForm();
+  if(act){var el=document.getElementById(act);if(el&&el!==document.activeElement&&/INPUT|SELECT|TEXTAREA/.test(el.tagName)){try{el.focus({preventScroll:true})}catch(e){}}}
+  window.scrollTo(0,pos);
+  $('#clk').textContent=fmt(S.clock);
+  var cur=({doctor:'hospital',queue:'hospital'})[r.name]||r.name;
+  document.querySelectorAll('#nav a').forEach(function(a){if(a.dataset.r===cur)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+  document.querySelectorAll('.lang.nav button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.l===S.lang))});
+  $('#autoBtn').setAttribute('aria-pressed',String(S.auto));$('#apBtn').setAttribute('aria-pressed',String(S.autopilot));$('#bigBtn').setAttribute('aria-pressed',String(S.large));
+  document.body.classList.toggle('large',S.large);$('#role').value=S.role;
+  var ut=S.user?S.user.type:'';document.querySelectorAll('#nav a').forEach(function(a){var f=a.dataset.for;a.hidden=!!S.user&&((f==='p'&&ut==='staff'&&false)||(f==='s'&&ut!=='staff'))});
+  var ub=document.querySelector('.userbox');if(ub){ub.hidden=!S.user;$('#userTxt').textContent=S.user?(ut==='staff'?S.role+' · ':'')+S.user.label:''}
+  document.title=TITLES[r.name]||TITLES.home;
+  document.documentElement.lang=S.lang;
+  applyLang()}
+var toastT;function toast(m){var t=$('#toast');t.textContent=S.lang==='en'?m:tx(m);t.hidden=false;clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true},2600)}
+
+/* ---------- actions ---------- */
+function after(){checkAlerts();render()}
+function val(id){var el=document.getElementById(id);return el?(el.type==='checkbox'?el.checked:el.value):''}
+var A={
+ back:function(e){goBack(e.dataset.parent)},
+ view:function(e){saveForm();S.view=e.dataset.v;render();window.location.hash=S.view==='patient'?'':S.view},
+ tick:function(e){var n=+e.dataset.n;for(var i=0;i<n;i++)step();after()},
+ auto:function(){S.auto=!S.auto;render()},
+ autopilot:function(){S.autopilot=!S.autopilot;log('Autopilot',S.autopilot?'on (demo only)':'off');after()},
+ large:function(){S.large=!S.large;render()},
+ reset:function(){seed();toast('Demo reset to 10:00 with 20 synthetic patients');render()},
+ lang:function(e){S.lang=e.dataset.l;render();renderGate()},
+ role:function(e){S.role=e.value;render()},
+ newcheckin:function(){S.track=null;S.form._err='';render()},
+ checkin:function(){
+   var type=val('pt-type')||'walk',d=val('pt-doc');
+   var r=checkIn({type:type,doctor:d,ref:val('pt-ref'),name:val('pt-name'),phone:val('pt-phone'),consent:val('pt-consent'),via:'self'});
+   if(r.err){S.form._err=r.err;render();return}
+   S.form._err='';S.track=r.p.id;['pt-name','pt-phone','pt-ref','pt-consent'].forEach(function(k){delete S.form[k]});toast('Token '+r.p.token+' issued');after()},
+ addwalk:function(){
+   var d=val('st-doc')||S.doctors[0].id;
+   var r=checkIn({type:'walk',doctor:d,name:val('st-name'),phone:val('st-phone'),consent:val('st-consent'),via:'desk'});
+   ['st-name','st-phone','st-consent'].forEach(function(k){delete S.form[k]});toast('Token '+r.p.token+' created');after()},
+ arrive:function(e){var p=pat(e.dataset.id);p.status='waiting';p.arrival=S.clock;p.predWait=eta(p).w;log('Marked arrived',p.token+' ('+p.ref+')');after()},
+ next:function(e){var d=doc(e.dataset.doc);if(d.current)finishCurrent(d);if(callNext(d)){toast('Called '+d.current.token)}after()},
+ again:function(e){var d=doc(e.dataset.doc);if(d.current){d.current.calls=2;log('Called again',d.current.token+' (2 of 2)')}after()},
+ noshow:function(e){var d=doc(e.dataset.doc),c=d.current;if(c&&c.calls>=2){c.status='noshow';d.current=null;log('No-show',c.token+' after two calls');callNext(d);toast(c.token+' marked no-show')}after()},
+ reinsert:function(e){var p=pat(e.dataset.id);p.status='waiting';p.calls=0;p.arrival=S.clock;p.alerted=false;log('Re-inserted',p.token+' by arrival time');after()},
+ pause:function(e){var d=doc(e.dataset.doc);d.paused=!d.paused;log(d.paused?'Doctor paused':'Doctor resumed',d.name);if(d.paused)delayAlert(d,'is away for a short while');after()},
+ late:function(e){var d=doc(e.dataset.doc);d.delay+=15;log('Doctor late',d.name+' +15 min (total '+d.delay+')');delayAlert(d,'is running about '+d.delay+' min late');after()},
+ onTime:function(e){var d=doc(e.dataset.doc);d.delay=0;log('Delay cleared',d.name);after()},
+ ovopen:function(e){S.ovr=e.dataset.id;render()},
+ ovcancel:function(){S.ovr=null;render()},
+ ovconfirm:function(e){
+   var r=val('ov-reason'),n=val('ov-note');if(!r){toast('Choose a reason first');return}
+   if(r.indexOf('Other')===0&&!n.trim()){toast('Add a note for "Other"');return}
+   var p=pat(e.dataset.id);p.override={reason:r,note:n.trim(),seq:++S.ovSeq,at:S.clock};S.ovr=null;delete S.form['ov-reason'];delete S.form['ov-note'];
+   log('Priority override',p.token+': '+r+(n?' ('+n+')':'')+' by authorised staff');toast(p.token+' moved to front');after()},
+ ovclear:function(e){var p=pat(e.dataset.id);p.override=null;log('Priority removed',p.token);after()},
+ sync:function(){if(S.syncFail){toast('Sync failed. Data last updated '+fmt(S.lastSync))}else{S.lastSync=S.clock;log('Sync',S.mode==='CSV'?'CSV imported':'Mock API read');toast('Sync complete')}after()},
+ fail:function(){S.syncFail=!S.syncFail;log('Simulated failure',S.syncFail?'on':'off');after()},
+ csvsample:function(){S.form['csv-text']='A-205,P. Ganesh,Dr. R. Lakshmi,10:40\nA-206,R. Uma,Dr. S. Venkat,10:45';render()},
+ csv:function(){
+   var lines=val('csv-text').split(/\n/).map(function(x){return x.trim()}).filter(Boolean),ok=0,bad=[];
+   lines.forEach(function(l,i){var c=l.split(',').map(function(x){return x.trim()});
+     var d=S.doctors.filter(function(x){return x.name.toLowerCase()===(c[2]||'').toLowerCase()})[0],m=/^(\d{1,2}):(\d{2})$/.exec(c[3]||'');
+     if(c.length<4||!c[0]||!d||!m){bad.push(i+1);return}
+     mkPatient({doctor:d.id,type:'appt',name:c[1],arrival:null,slot:(+m[1])*60+(+m[2]),ref:c[0],status:'booked',svc:8});ok++});
+   S.csvMsg=ok+' appointment(s) imported'+(bad.length?'; line(s) '+bad.join(', ')+' skipped (expected: ref, patient, exact doctor name, HH:MM).':'.');
+   if(ok){log('CSV import',ok+' appointments');S.lastSync=S.clock;delete S.form['csv-text']}
+   after()}
+};
+
+A.view=function(){};
+A.checkin=function(){
+  var type=val('pt-type')||'walk',d=val('pt-doc');
+  var r=checkIn({type:type,doctor:d,ref:val('pt-ref'),name:val('pt-name'),phone:val('pt-phone'),consent:val('pt-consent'),via:'self'});
+  if(r.err){S.form._err=r.err;render();return}
+  S.form._err='';['pt-name','pt-phone','pt-ref','pt-consent'].forEach(function(k){delete S.form[k]});
+  toast('Token '+r.p.token+' issued');checkAlerts();location.hash='#/queue/'+r.p.token};
+A.hdept=function(e){S.form['h-dept']=e.dataset.d;render(true)};
+A.report=function(e){var d=doc(e.dataset.doc);log('Issue reported',d.name+': '+val('rp-issue'),'Patient');toast('Thanks, report saved in the demo log');render()};
+A.alertson=function(e){var p=pat(e.dataset.id),n=val('tk-phone');if(String(n).replace(/\D/g,'').length<10){toast('Enter a 10-digit mobile number');return}p.phone=n;p.consent=true;p.alerted=false;log('Alerts on',p.token+' (consent given)','Patient');toast('SMS alerts on (simulated)');after()};
+A.alertsoff=function(e){var p=pat(e.dataset.id);p.consent=false;log('Alerts off',p.token,'Patient');after()};
+A.leave=function(e){var p=pat(e.dataset.id);p.status='left';log('Left queue',p.token,'Patient');toast('You have left the queue');location.hash='#/hospital'};
+
+/* ---------- login gate (demo only) ---------- */
+var G={step:'splash',tab:'patient',phone:'',role:'Reception',err:''};
+function renderGate(){
+  var g=$('#gate');if(S.user){g.hidden=true;return}g.hidden=false;
+  if(G.step==='splash'){g.innerHTML='<div class="splash"><div class="logo" aria-hidden="true">F</div><h1>FlowBridge</h1><p>Plug in, don\'t replace</p></div>';return}
+  var head='<div class="g-top"><div class="logo" aria-hidden="true">F</div><h2>FlowBridge</h2><p>Know your turn, without the crowding.</p></div>';
+  var body;
+  if(G.step==='otp'){
+    body='<h3>Verify your number</h3><p class="sub" style="margin:0">Enter the 4-digit code sent to +91 '+esc(G.phone)+'</p>'+
+     '<label class="f" for="g-otp">One-time password</label><input id="g-otp" class="g-otp" inputmode="numeric" maxlength="4" autocomplete="one-time-code" autofocus>'+
+     (G.err?'<div class="banner b-coral" role="alert">'+esc(G.err)+'</div>':'')+
+     '<div class="g-hint">Demo only: no SMS is sent. Use code <b>1234</b>.</div>'+
+     '<button class="btn g-big" data-primary data-act="gverify">Verify and continue</button><button class="g-link" data-act="gback">Change number</button>'}
+  else{
+    body='<h3>Log in or sign up</h3><div class="g-tabs" role="group" aria-label="Login type"><button data-act="gtab" data-t="patient" aria-pressed="'+(G.tab==='patient')+'">Patient</button><button data-act="gtab" data-t="staff" aria-pressed="'+(G.tab==='staff')+'">Hospital staff</button></div>'+
+     (G.tab==='staff'?'<label class="f" for="g-role" style="margin-top:0">Role</label><select id="g-role"><option value="Reception"'+(G.role==='Reception'?' selected':'')+'>Reception</option><option value="Manager"'+(G.role==='Manager'?' selected':'')+'>Manager</option><option value="Admin"'+(G.role==='Admin'?' selected':'')+'>Admin</option></select>':'')+
+     '<label class="f" for="g-phone">Mobile number</label><div class="g-phone"><span>+91</span><input id="g-phone" inputmode="numeric" maxlength="10" placeholder="98765 43210" autocomplete="tel-national" value="'+esc(G.phone)+'"></div>'+
+     (G.err?'<div class="banner b-coral" role="alert">'+esc(G.err)+'</div>':'')+
+     '<button class="btn g-big" data-primary data-act="gsend">Continue</button>'+
+     (G.tab==='patient'?'<div class="g-or">or</div><button class="btn alt g-big" style="margin-top:12px" data-act="gguest">Continue as guest</button>':'')+
+     '<p class="why" style="text-align:center">Demo login. Use any 10-digit number; the code is 1234. By continuing you agree this is a prototype with synthetic data.</p>'}
+  var bar='<div class="g-bar">'+(G.step==='otp'?'<button type="button" data-act="gback">&larr; Back</button>':'<span></span>')+'<div class="g-lang" role="group" aria-label="Language">'+[['en','English'],['ta','தமிழ்'],['hi','हिन्दी']].map(function(l){return '<button type="button" data-act="lang" data-l="'+l[0]+'" aria-pressed="'+(S.lang===l[0])+'">'+l[1]+'</button>'}).join('')+'</div></div>';
+  g.innerHTML=bar+head+'<div class="g-sheet">'+body+'</div>';applyLang();
+  var f=g.querySelector('input');if(f&&G.step==='otp'){try{f.focus()}catch(e){}}}
+function enter(u){
+  S.user=u;G.err='';
+  if(u.type==='staff'){S.role=G.role}
+  if(u.phone){S.form['pt-phone']=u.phone}
+  renderGate();location.hash=u.type==='staff'?'#/staff':'#/';render(true);toast('Welcome'+(u.type==='staff'?', '+S.role:''))}
+A.gtab=function(e){G.phone=val('g-phone')||G.phone;G.tab=e.dataset.t;G.err='';renderGate()};
+A.gsend=function(){
+  var ph=String(val('g-phone')).replace(/\D/g,'');if(G.tab==='staff')G.role=val('g-role')||G.role;
+  if(ph.length!==10){G.phone=ph;G.err='Enter a 10-digit mobile number.';renderGate();return}
+  G.phone=ph;G.err='';G.step='otp';renderGate()};
+A.gverify=function(){
+  if(String(val('g-otp')).trim()!=='1234'){G.err='That code is not right. Demo code is 1234.';renderGate();return}
+  var m=G.phone;G.step='login';enter({type:G.tab==='staff'?'staff':'patient',phone:m,label:'+91 '+m.slice(0,2)+'•••••'+m.slice(-3)})};
+A.gback=function(){G.step='login';G.err='';renderGate()};
+A.gguest=function(){G.step='login';enter({type:'patient',phone:'',label:'Guest'})};
+A.logout=function(){S.user=null;G.step='login';G.phone='';G.err='';S.auto=false;renderGate();location.hash='#/'};
+document.addEventListener('keydown',function(ev){if(ev.key==='Enter'&&!S.user&&G.step!=='splash'){var b=document.querySelector('#gate [data-primary]');if(b)b.click()}});
+
+
+A.rsopen=function(e){S.rs=e.dataset.id;S.cx=null;delete S.form['rs-slot'];delete S.form['rs-doc'];render()};
+A.rscancel=function(){S.rs=null;delete S.form['rs-slot'];delete S.form['rs-doc'];render()};
+A.rsconfirm=function(e){
+  var p=pat(e.dataset.id);if(!p||p.status!=='booked')return;
+  var ns=+val('rs-slot'),nd=val('rs-doc')||p.doctor,old=p.slot,od=p.doctor;
+  if(!ns){toast('Choose a time first');return}
+  if(ns===old&&nd===od){S.rs=null;toast('No change made');render();return}
+  if(nd!==od){var d2=doc(nd);S.counters[d2.code]+=1;p.token=d2.code+'-'+S.counters[d2.code];p.doctor=nd}
+  p.slot=ns;
+  var staff=S.user&&S.user.type==='staff',d=doc(p.doctor);
+  log('Appointment rescheduled',p.ref+': '+fmt(old)+' to '+fmt(ns)+(nd!==od?', doctor '+doc(od).name+' to '+d.name:''),staff?S.role:'Patient');
+  if(p.phone&&p.consent)sendSms(p,'Appointment changed','FlowBridge: your appointment '+p.ref+' has moved to '+fmt(ns)+' with '+d.name+', '+d.room+'.');
+  S.rs=null;delete S.form['rs-slot'];delete S.form['rs-doc'];toast('Appointment '+p.ref+' moved to '+fmt(ns));render()};
+A.cxopen=function(e){S.cx=e.dataset.id;S.rs=null;render()};
+A.cxcancel=function(){S.cx=null;render()};
+A.cxconfirm=function(e){
+  var p=pat(e.dataset.id);if(!p||p.status!=='booked')return;
+  p.status='cancelled';var staff=S.user&&S.user.type==='staff';
+  log('Appointment cancelled',p.ref+' at '+fmt(p.slot)+' with '+doc(p.doctor).name,staff?S.role:'Patient');
+  if(p.phone&&p.consent)sendSms(p,'Appointment cancelled','FlowBridge: your appointment '+p.ref+' has been cancelled. Please contact the desk to rebook.');
+  S.cx=null;toast('Appointment '+p.ref+' cancelled');render()};
+A.restore=function(e){
+  var p=pat(e.dataset.id);if(!p||p.status!=='cancelled')return;
+  p.status='booked';log('Appointment restored',p.ref+' at '+fmt(p.slot),S.role);toast('Appointment '+p.ref+' restored');render()};
+A.shift=function(){
+  var did=val('sh-doc')||S.doctors[0].id,m=+val('sh-min')||15,d=doc(did);
+  var list=S.patients.filter(function(p){return p.status==='booked'&&p.doctor===did});
+  if(!list.length){toast('No upcoming appointments for this doctor');return}
+  list.forEach(function(p){p.slot+=m;if(p.phone&&p.consent)sendSms(p,'Appointment changed','FlowBridge: your appointment '+p.ref+' with '+d.name+' is delayed by '+m+' min. New time: '+fmt(p.slot)+'.')});
+  log('Appointments shifted',d.name+' +'+m+' min ('+list.length+' appointments)',S.role);
+  toast('Shifted '+list.length+' appointment(s) by '+m+' min');render()};
+A.book=function(){
+  var d=val('ap-doc')||S.doctors[0].id,sl=+val('ap-slot'),n=val('ap-name'),ph=val('ap-phone'),cs=val('ap-consent');
+  var digits=String(ph).replace(/\D/g,'');
+  if(ph&&digits.length!==10){toast('Enter a 10-digit mobile number');return}
+  if(cs&&!ph){toast('Add a mobile number to get SMS alerts');return}
+  S.counters.ap=(S.counters.ap||300)+1;
+  var p=mkPatient({doctor:d,type:'appt',name:n,phone:ph,consent:cs&&!!ph,arrival:null,slot:sl,ref:'A-'+S.counters.ap,status:'booked',svc:8});
+  log('Appointment booked',p.ref+' with '+doc(d).name+' at '+fmt(sl),S.user&&S.user.type==='staff'?S.role:'Patient');
+  ['ap-name','ap-phone','ap-consent'].forEach(function(k){delete S.form[k]});toast('Booked. Your reference is '+p.ref);render()};
+A.apcheckin=function(e){
+  var p=pat(e.dataset.id);p.status='waiting';p.arrival=S.clock;p.predWait=eta(p).w;
+  log('Check-in',p.token+' (appointment '+p.ref+'), self-service','Patient');toast('Checked in. Token '+p.token);checkAlerts();location.hash='#/queue/'+p.token};
+var C={
+ rerender:function(){render()},
+ track:function(e){S.track=e.value||null;render()},
+ baseline:function(e){S.baseline=Math.max(0,+e.value||0);render()},
+ mode:function(e){S.mode=e.value;log('Connector mode',S.mode);render()},
+ rule:function(e){S.rule=e.value;log('Order rule',S.rule==='slot'?'slot time then walk-ins':'strict arrival','Admin');after()},
+ grace:function(e){S.grace=Math.max(0,+e.value||0);log('Grace window',S.grace+' min','Admin');after()},
+ svc:function(e){S.svcDefault=Math.max(3,+e.value||8);after()},
+ alert:function(e){S.alertAhead=Math.max(0,+e.value||0);after()},
+ ret:function(e){S.retention=Math.max(1,+e.value||30);log('Retention',S.retention+' days','Admin');render()}
+};
+document.addEventListener('click',function(ev){var b=ev.target.closest('[data-act]');if(!b||b.tagName==='SELECT')return;if(b.disabled)return;var f=A[b.dataset.act];if(f)f(b)});
+document.addEventListener('change',function(ev){
+  var el=ev.target;
+  if(el.dataset&&el.dataset.act==='role'){A.role(el);return}
+  if(el.dataset&&el.dataset.chg&&C[el.dataset.chg]){C[el.dataset.chg](el)}});
+var iv=null;setInterval(function(){if(S.auto){step();checkAlerts();render()}},1000);
+window.addEventListener('hashchange',function(){
+  var m=/^#\/checkin\/(\w+)/.exec(location.hash);
+  if(m&&doc(m[1])){S.form['pt-dept']=doc(m[1]).dept;S.form['pt-doc']=m[1]}
+  render(true);if(!/^#\/?(staff|analytics|settings)?$/.test('')){}window.scrollTo(0,0);var v=$('#view');if(v)v.focus({preventScroll:true})});
+seed();render();renderGate();setTimeout(function(){if(G.step==='splash'){G.step='login';renderGate()}},1800);
+window.__fb={S:S,A:A,seed:seed};
+})();
+</script>
+</body></html>
+
+</body></html>
